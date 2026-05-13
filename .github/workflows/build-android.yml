@@ -1,0 +1,69 @@
+name: Build Android APK
+
+on:
+  push:
+
+jobs:
+  build:
+    name: Build Android APK
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: Install workspace dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Setup Expo and EAS CLI
+        uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Build Android APK via EAS (waits for completion)
+        id: eas_build
+        working-directory: artifacts/mobile
+        run: |
+          BUILD_JSON=$(eas build \
+            --platform android \
+            --profile preview \
+            --non-interactive \
+            --wait \
+            --json 2>/dev/null)
+          echo "$BUILD_JSON" > eas-build-result.json
+          APK_URL=$(echo "$BUILD_JSON" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('artifacts',{}).get('buildUrl',''))" 2>/dev/null || echo "")
+          echo "apk_url=$APK_URL" >> $GITHUB_OUTPUT
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Download APK
+        working-directory: artifacts/mobile
+        run: curl -L "${{ steps.eas_build.outputs.apk_url }}" -o career-compass.apk
+
+      - name: Upload APK as GitHub artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: career-compass-android-${{ github.sha }}
+          path: artifacts/mobile/career-compass.apk
+          retention-days: 30
+
+      - name: Build summary
+        run: |
+          echo "## ✅ Android APK Ready" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Commit:** \`${{ github.sha }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "📥 **Download:** Go to the _Artifacts_ section of this workflow run and download \`career-compass-android-${{ github.sha }}\`." >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "📱 **Install on Android:** Enable _Install from unknown sources_ in your phone settings, then open the downloaded APK." >> $GITHUB_STEP_SUMMARY
