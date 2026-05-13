@@ -1,36 +1,36 @@
 import React, { useState } from 'react';
-import { Compass, MapPin, Search, Plus, ExternalLink, Sparkles, Loader2 } from 'lucide-react';
+import { Compass, MapPin, Search, Plus, ExternalLink, Sparkles, Loader2, AlertCircle } from 'lucide-react';
 import { findNearbyCompanies, researchCompany } from '../lib/gemini';
 import { CompanyDiscovery, UserProfile } from '../types';
 import { motion, AnimatePresence } from 'motion/react';
 import { db, OperationType, handleFirestoreError } from '../lib/firebase';
 import { collection, addDoc } from 'firebase/firestore';
+import { UserLocation } from '../App';
 
 interface DiscoveryProps {
   profile: UserProfile | null;
+  userLocation: UserLocation | null;
+  locationDenied: boolean;
 }
 
-export function Discovery({ profile }: DiscoveryProps) {
+export function Discovery({ profile, userLocation, locationDenied }: DiscoveryProps) {
   const [loading, setLoading] = useState(false);
   const [results, setResults] = useState<CompanyDiscovery[]>([]);
   const [research, setResearch] = useState<string | null>(null);
   const [researching, setResearching] = useState<string | null>(null);
 
-  const handleDiscover = () => {
+  const handleDiscover = async () => {
+    if (!userLocation) return;
     setLoading(true);
-    navigator.geolocation.getCurrentPosition(
-      async (position) => {
-        const { latitude, longitude } = position.coords;
-        const companies = await findNearbyCompanies(latitude, longitude, profile?.currentDegree || '');
-        setResults(companies);
-        setLoading(false);
-      },
-      (error) => {
-        console.error("Geolocation error:", error);
-        alert("Please enable location services to find companies nearby.");
-        setLoading(false);
-      }
+    const companies = await findNearbyCompanies(
+      userLocation.latitude,
+      userLocation.longitude,
+      userLocation.city,
+      userLocation.province,
+      profile?.currentDegree || ''
     );
+    setResults(companies);
+    setLoading(false);
   };
 
   const handleResearch = async (name: string) => {
@@ -46,14 +46,14 @@ export function Discovery({ profile }: DiscoveryProps) {
       await addDoc(collection(db, 'applications'), {
         userId: profile.uid,
         companyName: company.name,
-        role: 'Position Identified',
+        role: 'Internship / Position',
         status: 'Interested',
         notes: company.description || '',
         appliedDate: null,
         lastModified: new Date().toISOString(),
         draftedLetter: '',
       });
-      alert(`Added ${company.name} to your tracker!`);
+      alert(`Added ${company.name} to your applications!`);
     } catch (error) {
       handleFirestoreError(error, OperationType.CREATE, 'applications');
     }
@@ -64,24 +64,35 @@ export function Discovery({ profile }: DiscoveryProps) {
       <header className="flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div>
           <h1 className="text-5xl font-serif font-bold tracking-tight text-white leading-tight">
-            Discover Opportunities
+            Find Opportunities
           </h1>
           <p className="mt-4 text-white/50 text-lg font-medium">
-            Find companies around you looking for <span className="text-indigo-400">{profile?.currentDegree}</span> skills.
+            {userLocation
+              ? <>Showing internships and jobs near <span className="text-indigo-400">{userLocation.city}{userLocation.province ? `, ${userLocation.province}` : ''}</span> for <span className="text-indigo-400">{profile?.currentDegree}</span> students.</>
+              : <>Internships and jobs matching your <span className="text-indigo-400">{profile?.currentDegree}</span> degree.</>
+            }
           </p>
         </div>
-        <button
-          onClick={handleDiscover}
-          disabled={loading}
-          className="bg-indigo-500 text-white px-8 py-5 rounded-2xl font-bold flex items-center gap-3 hover:bg-indigo-400 transition-all shadow-2xl shadow-indigo-500/20 disabled:opacity-50 group uppercase text-sm tracking-widest whitespace-nowrap"
-        >
-          {loading ? (
-            <Loader2 className="w-5 h-5 animate-spin" />
-          ) : (
-            <MapPin className="w-5 h-5 group-hover:scale-110 transition-transform" />
-          )}
-          Find Companies Near Me
-        </button>
+
+        {locationDenied ? (
+          <div className="flex items-center gap-3 bg-amber-500/10 border border-amber-400/20 text-amber-300 px-6 py-4 rounded-2xl text-sm font-medium max-w-xs">
+            <AlertCircle className="w-5 h-5 shrink-0" />
+            Location access denied. Please enable it in your browser settings to find nearby opportunities.
+          </div>
+        ) : (
+          <button
+            onClick={handleDiscover}
+            disabled={loading || !userLocation}
+            className="bg-indigo-500 text-white px-8 py-5 rounded-2xl font-bold flex items-center gap-3 hover:bg-indigo-400 transition-all shadow-2xl shadow-indigo-500/20 disabled:opacity-50 group uppercase text-sm tracking-widest whitespace-nowrap"
+          >
+            {loading ? (
+              <Loader2 className="w-5 h-5 animate-spin" />
+            ) : (
+              <MapPin className="w-5 h-5 group-hover:scale-110 transition-transform" />
+            )}
+            {loading ? 'Searching...' : !userLocation ? 'Getting your location...' : 'Find Opportunities Near Me'}
+          </button>
+        )}
       </header>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
@@ -99,18 +110,18 @@ export function Discovery({ profile }: DiscoveryProps) {
                   {company.name[0]}
                 </div>
                 <div className="flex gap-3">
-                  <button 
+                  <button
                     onClick={() => handleResearch(company.name)}
                     disabled={researching === company.name}
                     className="p-3 text-white/40 hover:text-white bg-white/5 hover:bg-white/10 rounded-xl transition-all border border-white/5"
-                    title="Research with AI"
+                    title="Research this company with AI"
                   >
                     {researching === company.name ? <Loader2 className="w-5 h-5 animate-spin text-white" /> : <Search className="w-5 h-5" />}
                   </button>
-                  <button 
+                  <button
                     onClick={() => handleTrack(company)}
                     className="p-3 text-white/40 hover:text-white bg-white/5 hover:bg-white/10 rounded-xl transition-all border border-white/5"
-                    title="Add to Tracker"
+                    title="Save to my applications"
                   >
                     <Plus className="w-5 h-5" />
                   </button>
@@ -120,11 +131,11 @@ export function Discovery({ profile }: DiscoveryProps) {
               <div className="space-y-6 flex-grow">
                 <h3 className="text-3xl font-serif font-bold text-white tracking-tight">{company.name}</h3>
                 <p className="text-white/50 leading-relaxed italic font-medium">"{company.description}"</p>
-                
+
                 <div className="bg-indigo-500/10 p-6 rounded-2xl border border-indigo-400/20 backdrop-blur-sm relative overflow-hidden group">
                   <div className="flex items-center gap-2 text-indigo-300 font-bold text-[10px] uppercase tracking-[0.2em] mb-4 relative z-10">
                     <Sparkles className="w-3 h-3" />
-                    AI Path Mapping
+                    Why this fits you
                   </div>
                   <p className="text-white/80 text-sm leading-relaxed font-medium relative z-10">{company.fitScore}</p>
                   <div className="absolute top-0 right-0 w-24 h-24 bg-indigo-400/5 blur-2xl -z-0" />
@@ -132,16 +143,16 @@ export function Discovery({ profile }: DiscoveryProps) {
               </div>
 
               <div className="mt-10 pt-10 border-t border-white/5 flex gap-4">
-                <button 
+                <button
                   onClick={() => handleTrack(company)}
                   className="flex-grow py-4 bg-white text-indigo-950 rounded-2xl font-bold text-xs uppercase tracking-widest hover:bg-white/90 transition-all shadow-xl shadow-white/5"
                 >
-                  Track Application
+                  Save & Track
                 </button>
                 {company.website && (
-                  <a 
-                    href={company.website} 
-                    target="_blank" 
+                  <a
+                    href={company.website}
+                    target="_blank"
                     rel="noreferrer"
                     className="p-4 bg-white/5 border border-white/10 rounded-2xl hover:bg-white/10 transition-colors"
                   >
@@ -156,7 +167,11 @@ export function Discovery({ profile }: DiscoveryProps) {
         {results.length === 0 && !loading && (
           <div className="col-span-full py-32 flex flex-col items-center justify-center text-center opacity-20">
             <Compass className="w-16 h-16 mb-4" />
-            <p className="text-xl font-medium tracking-wide uppercase text-xs">Ready to explore? Run a geospatial scan.</p>
+            <p className="text-xl font-medium">
+              {userLocation
+                ? 'Hit the button above to find internship opportunities near you.'
+                : 'Waiting for your location to load...'}
+            </p>
           </div>
         )}
       </div>
@@ -165,7 +180,7 @@ export function Discovery({ profile }: DiscoveryProps) {
       <AnimatePresence>
         {research && (
           <div className="fixed inset-0 bg-indigo-950/40 backdrop-blur-md z-[60] flex items-center justify-center p-6">
-            <motion.div 
+            <motion.div
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
@@ -181,11 +196,11 @@ export function Discovery({ profile }: DiscoveryProps) {
                 </div>
               </div>
               <div className="p-10 bg-white/5 border-t border-white/10 flex justify-end">
-                <button 
+                <button
                   onClick={() => setResearch(null)}
                   className="px-10 py-4 bg-white text-indigo-950 rounded-2xl font-bold uppercase tracking-widest text-xs shadow-xl shadow-white/5"
                 >
-                  Close Data
+                  Close
                 </button>
               </div>
             </motion.div>

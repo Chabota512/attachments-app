@@ -1,17 +1,19 @@
 import React, { useState, useEffect } from 'react';
-import { collection, query, where, getDocs, limit, orderBy } from 'firebase/firestore';
+import { collection, query, where, getDocs } from 'firebase/firestore';
 import { db, handleFirestoreError, OperationType } from '../lib/firebase';
 import { Application, UserProfile } from '../types';
-import { Briefcase, Clock, CheckCircle, Search, ArrowRight, Compass } from 'lucide-react';
+import { Briefcase, Clock, CheckCircle, Search, ArrowRight, Compass, MapPin } from 'lucide-react';
 import { motion } from 'motion/react';
 import { formatDate, cn } from '../lib/utils';
+import { UserLocation } from '../App';
 
 interface DashboardProps {
   profile: UserProfile | null;
+  userLocation: UserLocation | null;
   onTabChange: (tab: any) => void;
 }
 
-export function Dashboard({ profile, onTabChange }: DashboardProps) {
+export function Dashboard({ profile, userLocation, onTabChange }: DashboardProps) {
   const [stats, setStats] = useState({
     total: 0,
     applied: 0,
@@ -29,9 +31,9 @@ export function Dashboard({ profile, onTabChange }: DashboardProps) {
         const appsRef = collection(db, 'applications');
         const q = query(appsRef, where('userId', '==', profile.uid));
         const snapshot = await getDocs(q);
-        
+
         const apps = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Application));
-        
+
         setStats({
           total: apps.length,
           applied: apps.filter(a => a.status === 'Applied').length,
@@ -39,11 +41,10 @@ export function Dashboard({ profile, onTabChange }: DashboardProps) {
           offers: apps.filter(a => a.status === 'Offer' || a.status === 'Accepted').length
         });
 
-        // Sort by last modified manually as simple where query doesn't allow order without index
-        const sorted = [...apps].sort((a, b) => 
+        const sorted = [...apps].sort((a, b) =>
           new Date(b.lastModified || 0).getTime() - new Date(a.lastModified || 0).getTime()
         ).slice(0, 3);
-        
+
         setRecentApps(sorted);
       } catch (error) {
         handleFirestoreError(error, OperationType.LIST, 'applications');
@@ -62,14 +63,17 @@ export function Dashboard({ profile, onTabChange }: DashboardProps) {
           Hello, {profile?.displayName?.split(' ')[0]}
         </h1>
         <p className="mt-3 text-white/50 font-sans text-lg">
-          Currently navigating your <span className="text-indigo-400 font-semibold">{profile?.currentDegree}</span> path.
+          {userLocation
+            ? <>Searching for <span className="text-indigo-400 font-semibold">{profile?.currentDegree}</span> opportunities near <span className="text-indigo-400 font-semibold">{userLocation.city}</span>.</>
+            : <>Navigating your <span className="text-indigo-400 font-semibold">{profile?.currentDegree}</span> career path.</>
+          }
         </p>
       </header>
 
       {/* Quick Stats */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {[
-          { label: 'Total Tracked', val: stats.total, icon: Briefcase, color: 'bg-white/5 text-white' },
+          { label: 'Total Saved', val: stats.total, icon: Briefcase, color: 'bg-white/5 text-white' },
           { label: 'Applied', val: stats.applied, icon: Clock, color: 'bg-blue-500/10 text-blue-400' },
           { label: 'Interviews', val: stats.interviewing, icon: Search, color: 'bg-purple-500/10 text-purple-400' },
           { label: 'Offers', val: stats.offers, icon: CheckCircle, color: 'bg-emerald-500/10 text-emerald-400' },
@@ -95,14 +99,14 @@ export function Dashboard({ profile, onTabChange }: DashboardProps) {
         <div className="lg:col-span-2 space-y-6">
           <div className="flex items-center justify-between">
             <h2 className="text-2xl font-serif font-medium text-white">Recent Applications</h2>
-            <button 
+            <button
               onClick={() => onTabChange('tracker')}
               className="text-xs font-bold uppercase tracking-widest text-white/40 hover:text-white flex items-center gap-2 group transition-colors"
             >
               View all <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
             </button>
           </div>
-          
+
           <div className="space-y-4">
             {recentApps.length > 0 ? (
               recentApps.map((app) => (
@@ -125,18 +129,18 @@ export function Dashboard({ profile, onTabChange }: DashboardProps) {
                     )}>
                       {app.status}
                     </span>
-                    <p className="text-[10px] text-white/20 mt-2 font-bold uppercase tracking-widest">Fixed {formatDate(app.lastModified || '')}</p>
+                    <p className="text-[10px] text-white/20 mt-2 font-bold uppercase tracking-widest">Updated {formatDate(app.lastModified || '')}</p>
                   </div>
                 </div>
               ))
             ) : (
               <div className="glass-card border-dashed p-12 rounded-[2rem] text-center opacity-50">
-                <p className="text-white font-medium">No projects in view.</p>
-                <button 
+                <p className="text-white font-medium">No applications tracked yet.</p>
+                <button
                   onClick={() => onTabChange('tracker')}
                   className="mt-4 text-white font-bold underline underline-offset-8 uppercase text-xs tracking-widest"
                 >
-                  Initiate first track
+                  Track your first application
                 </button>
               </div>
             )}
@@ -149,19 +153,28 @@ export function Dashboard({ profile, onTabChange }: DashboardProps) {
             <div className="w-16 h-16 bg-white/10 rounded-2xl flex items-center justify-center mb-10 border border-white/10">
               <Compass className="w-8 h-8 text-indigo-400" />
             </div>
-            <h3 className="text-3xl font-serif font-bold leading-tight">Find local opportunities</h3>
+            <h3 className="text-3xl font-serif font-bold leading-tight">Find nearby internships</h3>
             <p className="mt-4 text-white/40 leading-relaxed font-medium">
-              Geospatial discovery for {profile?.currentDegree} roles.
+              {userLocation
+                ? <>AI-powered search near <span className="text-indigo-300">{userLocation.city}</span> for <span className="text-indigo-300">{profile?.currentDegree}</span> students.</>
+                : <>AI-powered internship and job discovery based on your degree.</>
+              }
             </p>
+            {userLocation && (
+              <div className="mt-4 flex items-center gap-2 text-white/30 text-xs font-bold uppercase tracking-widest">
+                <MapPin className="w-3 h-3" />
+                {userLocation.city}{userLocation.province ? `, ${userLocation.province}` : ''}
+              </div>
+            )}
           </div>
-          <button 
+          <button
             onClick={() => onTabChange('discovery')}
             className="mt-12 w-full py-5 bg-white text-indigo-950 rounded-2xl font-bold flex items-center justify-center gap-3 hover:bg-white/90 active:scale-[0.98] transition-all z-10 relative text-sm uppercase tracking-widest"
           >
-            Start Scan
+            Find Opportunities
             <ArrowRight className="w-5 h-5" />
           </button>
-          
+
           <div className="absolute -right-10 -bottom-10 w-48 h-48 bg-indigo-500/20 rounded-full blur-3xl group-hover:scale-150 transition-transform duration-700" />
         </div>
       </div>

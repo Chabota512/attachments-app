@@ -2,8 +2,27 @@ import { GoogleGenAI, Type } from "@google/genai";
 
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
-export async function findNearbyCompanies(latitude: number, longitude: number, degree: string) {
-  const prompt = `I am a student pursuing a ${degree} degree. My location is lat: ${latitude}, long: ${longitude}. Find 5 relevant companies nearby that might offer internships or jobs for someone in my field. For each company, provide: name, description, and why it's a good fit for my background. Return the data as a list of objects.`;
+export async function findNearbyCompanies(
+  latitude: number,
+  longitude: number,
+  city: string,
+  province: string,
+  degree: string
+) {
+  const location = province ? `${city}, ${province}` : city;
+  const prompt = `I am a student pursuing a ${degree} degree based in ${location}, South Africa (coordinates: lat ${latitude}, lon ${longitude}).
+
+Find 5 real companies in or near ${location} that are known to offer internships, graduate programmes, or entry-level jobs relevant to someone studying ${degree}. 
+
+Prioritise well-known South African companies, local businesses, and organisations that actively recruit students or graduates in this field.
+
+For each company provide:
+- name: the real company name
+- description: a one-sentence description of what they do
+- fitScore: a specific explanation of why this company is a good fit for a ${degree} student, including any known graduate or internship programmes
+- website: their official website URL if known (omit if unsure)
+
+Return the results as a JSON array.`;
 
   try {
     const response = await ai.models.generateContent({
@@ -19,7 +38,7 @@ export async function findNearbyCompanies(latitude: number, longitude: number, d
             properties: {
               name: { type: Type.STRING },
               description: { type: Type.STRING },
-              fitScore: { type: Type.STRING, description: "Detailed explanation of why it fits the degree" },
+              fitScore: { type: Type.STRING, description: "Why this company fits the student's degree" },
               website: { type: Type.STRING },
             },
             required: ["name", "description", "fitScore"],
@@ -35,18 +54,25 @@ export async function findNearbyCompanies(latitude: number, longitude: number, d
   }
 }
 
-export async function draftApplicationLetter(companyName: number | string, role: string, degree: string, goals: string) {
-  const prompt = `Draft a professional application letter (or email) for a ${role} position at ${companyName}. The applicant is pursuing a ${degree} degree. 
-  Career goals: ${goals}. 
-  The letter should be tailored, professional, and highlight how the degree degree aligns with the company's presumed needs. 
-  Include placeholders like [Date], [Hiring Manager Name] if unknown.`;
+export async function draftApplicationLetter(companyName: string | number, role: string, degree: string, goals: string) {
+  const prompt = `Draft a professional cover letter (or email) for a ${role} position at ${companyName}. 
+
+The applicant is a South African student pursuing a ${degree} degree.
+Their background and goals: ${goals}
+
+The letter should:
+- Be professional, genuine, and tailored to ${companyName}
+- Highlight how the student's degree and goals align with the company
+- Be concise (3–4 paragraphs)
+- Use placeholders like [Date], [Hiring Manager Name] where information is unknown
+- Reference South African context where appropriate (e.g. SETA programmes, NQF level, WIL requirements if relevant)`;
 
   try {
     const response = await ai.models.generateContent({
       model: "gemini-3-flash-preview",
       contents: prompt,
       config: {
-        systemInstruction: "You are an expert career coach and professional writer. Create highly tailored, persuasive application letters.",
+        systemInstruction: "You are an expert career coach helping South African students find internships and jobs. Write genuine, tailored cover letters that stand out.",
       }
     });
 
@@ -58,7 +84,14 @@ export async function draftApplicationLetter(companyName: number | string, role:
 }
 
 export async function researchCompany(companyName: string) {
-  const prompt = `Research ${companyName}. Provide a summary of what they do, their company culture, and any recent news or projects that would be relevant for a potential job applicant to mention in an interview.`;
+  const prompt = `Research ${companyName}. Provide:
+1. What they do and their industry
+2. Their presence in South Africa (offices, size, reputation)
+3. Whether they offer internships, graduate programmes, or learnerships
+4. Company culture and what they look for in candidates
+5. Any recent news relevant to a job applicant
+
+Keep it concise and practical — written for a student preparing to apply.`;
 
   try {
     const response = await ai.models.generateContent({
@@ -72,6 +105,6 @@ export async function researchCompany(companyName: string) {
     return response.text;
   } catch (error) {
     console.error("Gemini Research Error:", error);
-    return "Could not find detailed research for this company.";
+    return "Could not find detailed information for this company.";
   }
 }
