@@ -10,6 +10,8 @@ servers:
 tags:
   - name: health
     description: Health operations
+  - name: ai
+    description: AI-powered features
 paths:
   /healthz:
     get:
@@ -24,6 +26,144 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /ai/discover-companies:
+    post:
+      operationId: discoverCompanies
+      tags: [ai]
+      summary: Find nearby companies using AI
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DiscoverCompaniesInput"
+      responses:
+        "200":
+          description: List of nearby companies
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/CompanyDiscovery"
+
+  /ai/draft-letter:
+    post:
+      operationId: draftLetter
+      tags: [ai]
+      summary: Draft or polish an application letter using AI
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DraftLetterInput"
+      responses:
+        "200":
+          description: Drafted letter text
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DraftLetterResult"
+
+  /ai/research-company:
+    post:
+      operationId: researchCompany
+      tags: [ai]
+      summary: Research a company using AI
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ResearchCompanyInput"
+      responses:
+        "200":
+          description: Company research summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ResearchCompanyResult"
+
+  /ai/star-feedback:
+    post:
+      operationId: starFeedback
+      tags: [ai]
+      summary: Get AI feedback on a STAR-format interview answer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StarFeedbackInput"
+      responses:
+        "200":
+          description: AI feedback on the STAR answer
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StarFeedbackResult"
+
+  /ai/profile-chat:
+    post:
+      operationId: profileChat
+      tags: [ai]
+      summary: Conversational AI profile setup assistant
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProfileChatInput"
+      responses:
+        "200":
+          description: AI reply and optional extracted profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProfileChatResult"
+
+  /ai/networking-events:
+    post:
+      operationId: findNetworkingEvents
+      tags: [ai]
+      summary: Find real networking events from the internet
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/NetworkingEventsInput"
+      responses:
+        "200":
+          description: List of networking events found on the internet
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/NetworkingEvent"
+
+  /ai/interview-questions:
+    post:
+      operationId: interviewQuestions
+      tags: [ai]
+      summary: Generate interview questions for a company and role
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/InterviewQuestionsInput"
+      responses:
+        "200":
+          description: Categorised interview questions
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InterviewQuestionsResult"
+
 components:
   schemas:
     HealthStatus:
@@ -34,3 +174,290 @@ components:
       required:
         - status
 
+    ChatMessage:
+      type: object
+      required:
+        - role
+        - content
+      properties:
+        role:
+          type: string
+        content:
+          type: string
+
+    ProfileChatInput:
+      type: object
+      required:
+        - messages
+      properties:
+        messages:
+          type: array
+          items:
+            $ref: "#/components/schemas/ChatMessage"
+
+    ProfileField:
+      type: object
+      required:
+        - label
+        - value
+      properties:
+        label:
+          type: string
+        value:
+          type: string
+
+    ExtractedProfile:
+      type: object
+      properties:
+        displayName:
+          type: string
+        currentDegree:
+          type: string
+        institution:
+          type: string
+        yearOfStudy:
+          type: string
+        skills:
+          type: string
+        city:
+          type: string
+        preferredIndustries:
+          type: string
+        careerGoals:
+          type: string
+        portfolioUrl:
+          type: string
+        profileFields:
+          type: array
+          items:
+            $ref: "#/components/schemas/ProfileField"
+
+    ProfileChatResult:
+      type: object
+      required:
+        - reply
+        - isComplete
+      properties:
+        reply:
+          type: string
+        isComplete:
+          type: boolean
+        profileData:
+          $ref: "#/components/schemas/ExtractedProfile"
+
+    DiscoverCompaniesInput:
+      type: object
+      required:
+        - latitude
+        - longitude
+        - degree
+      properties:
+        latitude:
+          type: number
+        longitude:
+          type: number
+        degree:
+          type: string
+        institution:
+          type: string
+        yearOfStudy:
+          type: string
+        skills:
+          type: string
+        city:
+          type: string
+        preferredIndustries:
+          type: string
+        goals:
+          type: string
+
+    CompanyDiscovery:
+      type: object
+      required:
+        - name
+        - description
+        - fitScore
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        fitScore:
+          type: string
+        website:
+          type: ["string", "null"]
+
+    DraftLetterInput:
+      type: object
+      required:
+        - companyName
+        - role
+        - degree
+        - goals
+      properties:
+        companyName:
+          type: string
+        role:
+          type: string
+        degree:
+          type: string
+        goals:
+          type: string
+        institution:
+          type: string
+        yearOfStudy:
+          type: string
+        skills:
+          type: string
+        portfolioUrl:
+          type: string
+        userDraft:
+          type: string
+
+    DraftLetterResult:
+      type: object
+      required:
+        - letter
+      properties:
+        letter:
+          type: string
+
+    ResearchCompanyInput:
+      type: object
+      required:
+        - companyName
+      properties:
+        companyName:
+          type: string
+
+    ResearchCompanyResult:
+      type: object
+      required:
+        - summary
+      properties:
+        summary:
+          type: string
+
+    StarFeedbackInput:
+      type: object
+      required:
+        - question
+        - situation
+        - task
+        - action
+        - result
+      properties:
+        question:
+          type: string
+        situation:
+          type: string
+        task:
+          type: string
+        action:
+          type: string
+        result:
+          type: string
+
+    StarFeedbackResult:
+      type: object
+      required:
+        - feedback
+      properties:
+        feedback:
+          type: string
+
+    InterviewQuestionsInput:
+      type: object
+      required:
+        - companyName
+        - role
+        - degree
+        - goals
+      properties:
+        companyName:
+          type: string
+        role:
+          type: string
+        degree:
+          type: string
+        goals:
+          type: string
+        institution:
+          type: string
+        yearOfStudy:
+          type: string
+        skills:
+          type: string
+        researchSummary:
+          type: string
+
+    NetworkingEventsInput:
+      type: object
+      required:
+        - city
+      properties:
+        city:
+          type: string
+        degree:
+          type: string
+        preferredIndustries:
+          type: string
+        goals:
+          type: string
+
+    NetworkingEvent:
+      type: object
+      required:
+        - id
+        - title
+        - eventType
+        - organizer
+        - dateLabel
+        - location
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        eventType:
+          type: string
+        organizer:
+          type: string
+        dateLabel:
+          type: string
+        dateIso:
+          type: string
+        location:
+          type: string
+        description:
+          type: string
+        url:
+          type: string
+        source:
+          type: string
+        tags:
+          type: array
+          items:
+            type: string
+        isOnline:
+          type: boolean
+
+    InterviewQuestionsResult:
+      type: object
+      required:
+        - personal
+        - company
+        - experience
+      properties:
+        personal:
+          type: array
+          items:
+            type: string
+        company:
+          type: array
+          items:
+            type: string
+        experience:
+          type: array
+          items:
+            type: string

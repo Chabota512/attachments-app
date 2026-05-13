@@ -5,18 +5,37 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import type {
+  MutationFunction,
   QueryFunction,
   QueryKey,
+  UseMutationOptions,
+  UseMutationResult,
   UseQueryOptions,
   UseQueryResult,
 } from "@tanstack/react-query";
 
-import type { HealthStatus } from "./api.schemas";
+import type {
+  CompanyDiscovery,
+  DiscoverCompaniesInput,
+  DraftLetterInput,
+  DraftLetterResult,
+  HealthStatus,
+  InterviewQuestionsInput,
+  InterviewQuestionsResult,
+  NetworkingEvent,
+  NetworkingEventsInput,
+  ProfileChatInput,
+  ProfileChatResult,
+  ResearchCompanyInput,
+  ResearchCompanyResult,
+  StarFeedbackInput,
+  StarFeedbackResult,
+} from "./api.schemas";
 
 import { customFetch } from "../custom-fetch";
-import type { ErrorType } from "../custom-fetch";
+import type { ErrorType, BodyType } from "../custom-fetch";
 
 type AwaitedInput<T> = PromiseLike<T> | T;
 
@@ -99,3 +118,605 @@ export function useHealthCheck<
 
   return { ...query, queryKey: queryOptions.queryKey };
 }
+
+/**
+ * @summary Find nearby companies using AI
+ */
+export const getDiscoverCompaniesUrl = () => {
+  return `/api/ai/discover-companies`;
+};
+
+export const discoverCompanies = async (
+  discoverCompaniesInput: DiscoverCompaniesInput,
+  options?: RequestInit,
+): Promise<CompanyDiscovery[]> => {
+  return customFetch<CompanyDiscovery[]>(getDiscoverCompaniesUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(discoverCompaniesInput),
+  });
+};
+
+export const getDiscoverCompaniesMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof discoverCompanies>>,
+    TError,
+    { data: BodyType<DiscoverCompaniesInput> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof discoverCompanies>>,
+  TError,
+  { data: BodyType<DiscoverCompaniesInput> },
+  TContext
+> => {
+  const mutationKey = ["discoverCompanies"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof discoverCompanies>>,
+    { data: BodyType<DiscoverCompaniesInput> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return discoverCompanies(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type DiscoverCompaniesMutationResult = NonNullable<
+  Awaited<ReturnType<typeof discoverCompanies>>
+>;
+export type DiscoverCompaniesMutationBody = BodyType<DiscoverCompaniesInput>;
+export type DiscoverCompaniesMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Find nearby companies using AI
+ */
+export const useDiscoverCompanies = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof discoverCompanies>>,
+    TError,
+    { data: BodyType<DiscoverCompaniesInput> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof discoverCompanies>>,
+  TError,
+  { data: BodyType<DiscoverCompaniesInput> },
+  TContext
+> => {
+  return useMutation(getDiscoverCompaniesMutationOptions(options));
+};
+
+/**
+ * @summary Draft or polish an application letter using AI
+ */
+export const getDraftLetterUrl = () => {
+  return `/api/ai/draft-letter`;
+};
+
+export const draftLetter = async (
+  draftLetterInput: DraftLetterInput,
+  options?: RequestInit,
+): Promise<DraftLetterResult> => {
+  return customFetch<DraftLetterResult>(getDraftLetterUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(draftLetterInput),
+  });
+};
+
+export const getDraftLetterMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof draftLetter>>,
+    TError,
+    { data: BodyType<DraftLetterInput> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof draftLetter>>,
+  TError,
+  { data: BodyType<DraftLetterInput> },
+  TContext
+> => {
+  const mutationKey = ["draftLetter"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof draftLetter>>,
+    { data: BodyType<DraftLetterInput> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return draftLetter(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type DraftLetterMutationResult = NonNullable<
+  Awaited<ReturnType<typeof draftLetter>>
+>;
+export type DraftLetterMutationBody = BodyType<DraftLetterInput>;
+export type DraftLetterMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Draft or polish an application letter using AI
+ */
+export const useDraftLetter = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof draftLetter>>,
+    TError,
+    { data: BodyType<DraftLetterInput> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof draftLetter>>,
+  TError,
+  { data: BodyType<DraftLetterInput> },
+  TContext
+> => {
+  return useMutation(getDraftLetterMutationOptions(options));
+};
+
+/**
+ * @summary Research a company using AI
+ */
+export const getResearchCompanyUrl = () => {
+  return `/api/ai/research-company`;
+};
+
+export const researchCompany = async (
+  researchCompanyInput: ResearchCompanyInput,
+  options?: RequestInit,
+): Promise<ResearchCompanyResult> => {
+  return customFetch<ResearchCompanyResult>(getResearchCompanyUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(researchCompanyInput),
+  });
+};
+
+export const getResearchCompanyMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof researchCompany>>,
+    TError,
+    { data: BodyType<ResearchCompanyInput> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof researchCompany>>,
+  TError,
+  { data: BodyType<ResearchCompanyInput> },
+  TContext
+> => {
+  const mutationKey = ["researchCompany"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof researchCompany>>,
+    { data: BodyType<ResearchCompanyInput> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return researchCompany(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ResearchCompanyMutationResult = NonNullable<
+  Awaited<ReturnType<typeof researchCompany>>
+>;
+export type ResearchCompanyMutationBody = BodyType<ResearchCompanyInput>;
+export type ResearchCompanyMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Research a company using AI
+ */
+export const useResearchCompany = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof researchCompany>>,
+    TError,
+    { data: BodyType<ResearchCompanyInput> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof researchCompany>>,
+  TError,
+  { data: BodyType<ResearchCompanyInput> },
+  TContext
+> => {
+  return useMutation(getResearchCompanyMutationOptions(options));
+};
+
+/**
+ * @summary Get AI feedback on a STAR-format interview answer
+ */
+export const getStarFeedbackUrl = () => {
+  return `/api/ai/star-feedback`;
+};
+
+export const starFeedback = async (
+  starFeedbackInput: StarFeedbackInput,
+  options?: RequestInit,
+): Promise<StarFeedbackResult> => {
+  return customFetch<StarFeedbackResult>(getStarFeedbackUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(starFeedbackInput),
+  });
+};
+
+export const getStarFeedbackMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof starFeedback>>,
+    TError,
+    { data: BodyType<StarFeedbackInput> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof starFeedback>>,
+  TError,
+  { data: BodyType<StarFeedbackInput> },
+  TContext
+> => {
+  const mutationKey = ["starFeedback"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof starFeedback>>,
+    { data: BodyType<StarFeedbackInput> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return starFeedback(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type StarFeedbackMutationResult = NonNullable<
+  Awaited<ReturnType<typeof starFeedback>>
+>;
+export type StarFeedbackMutationBody = BodyType<StarFeedbackInput>;
+export type StarFeedbackMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Get AI feedback on a STAR-format interview answer
+ */
+export const useStarFeedback = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof starFeedback>>,
+    TError,
+    { data: BodyType<StarFeedbackInput> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof starFeedback>>,
+  TError,
+  { data: BodyType<StarFeedbackInput> },
+  TContext
+> => {
+  return useMutation(getStarFeedbackMutationOptions(options));
+};
+
+/**
+ * @summary Conversational AI profile setup assistant
+ */
+export const getProfileChatUrl = () => {
+  return `/api/ai/profile-chat`;
+};
+
+export const profileChat = async (
+  profileChatInput: ProfileChatInput,
+  options?: RequestInit,
+): Promise<ProfileChatResult> => {
+  return customFetch<ProfileChatResult>(getProfileChatUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(profileChatInput),
+  });
+};
+
+export const getProfileChatMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof profileChat>>,
+    TError,
+    { data: BodyType<ProfileChatInput> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof profileChat>>,
+  TError,
+  { data: BodyType<ProfileChatInput> },
+  TContext
+> => {
+  const mutationKey = ["profileChat"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof profileChat>>,
+    { data: BodyType<ProfileChatInput> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return profileChat(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ProfileChatMutationResult = NonNullable<
+  Awaited<ReturnType<typeof profileChat>>
+>;
+export type ProfileChatMutationBody = BodyType<ProfileChatInput>;
+export type ProfileChatMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Conversational AI profile setup assistant
+ */
+export const useProfileChat = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof profileChat>>,
+    TError,
+    { data: BodyType<ProfileChatInput> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof profileChat>>,
+  TError,
+  { data: BodyType<ProfileChatInput> },
+  TContext
+> => {
+  return useMutation(getProfileChatMutationOptions(options));
+};
+
+/**
+ * @summary Find real networking events from the internet
+ */
+export const getFindNetworkingEventsUrl = () => {
+  return `/api/ai/networking-events`;
+};
+
+export const findNetworkingEvents = async (
+  networkingEventsInput: NetworkingEventsInput,
+  options?: RequestInit,
+): Promise<NetworkingEvent[]> => {
+  return customFetch<NetworkingEvent[]>(getFindNetworkingEventsUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(networkingEventsInput),
+  });
+};
+
+export const getFindNetworkingEventsMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof findNetworkingEvents>>,
+    TError,
+    { data: BodyType<NetworkingEventsInput> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof findNetworkingEvents>>,
+  TError,
+  { data: BodyType<NetworkingEventsInput> },
+  TContext
+> => {
+  const mutationKey = ["findNetworkingEvents"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof findNetworkingEvents>>,
+    { data: BodyType<NetworkingEventsInput> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return findNetworkingEvents(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type FindNetworkingEventsMutationResult = NonNullable<
+  Awaited<ReturnType<typeof findNetworkingEvents>>
+>;
+export type FindNetworkingEventsMutationBody = BodyType<NetworkingEventsInput>;
+export type FindNetworkingEventsMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Find real networking events from the internet
+ */
+export const useFindNetworkingEvents = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof findNetworkingEvents>>,
+    TError,
+    { data: BodyType<NetworkingEventsInput> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof findNetworkingEvents>>,
+  TError,
+  { data: BodyType<NetworkingEventsInput> },
+  TContext
+> => {
+  return useMutation(getFindNetworkingEventsMutationOptions(options));
+};
+
+/**
+ * @summary Generate interview questions for a company and role
+ */
+export const getInterviewQuestionsUrl = () => {
+  return `/api/ai/interview-questions`;
+};
+
+export const interviewQuestions = async (
+  interviewQuestionsInput: InterviewQuestionsInput,
+  options?: RequestInit,
+): Promise<InterviewQuestionsResult> => {
+  return customFetch<InterviewQuestionsResult>(getInterviewQuestionsUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(interviewQuestionsInput),
+  });
+};
+
+export const getInterviewQuestionsMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof interviewQuestions>>,
+    TError,
+    { data: BodyType<InterviewQuestionsInput> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof interviewQuestions>>,
+  TError,
+  { data: BodyType<InterviewQuestionsInput> },
+  TContext
+> => {
+  const mutationKey = ["interviewQuestions"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof interviewQuestions>>,
+    { data: BodyType<InterviewQuestionsInput> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return interviewQuestions(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type InterviewQuestionsMutationResult = NonNullable<
+  Awaited<ReturnType<typeof interviewQuestions>>
+>;
+export type InterviewQuestionsMutationBody = BodyType<InterviewQuestionsInput>;
+export type InterviewQuestionsMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Generate interview questions for a company and role
+ */
+export const useInterviewQuestions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof interviewQuestions>>,
+    TError,
+    { data: BodyType<InterviewQuestionsInput> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof interviewQuestions>>,
+  TError,
+  { data: BodyType<InterviewQuestionsInput> },
+  TContext
+> => {
+  return useMutation(getInterviewQuestionsMutationOptions(options));
+};

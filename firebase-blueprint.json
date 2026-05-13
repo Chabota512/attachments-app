@@ -1,0 +1,48 @@
+{
+  "entities": {
+    "User": {
+      "title": "User Profile",
+      "description": "User's basic info and academic background",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "email": { "type": "string" },
+        "displayName": { "type": "string" },
+        "currentDegree": { "type": "string", "description": "The degree the user is currently pursuing" },
+        "careerGoals": { "type": "string" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "email"]
+    },
+    "Application": {
+      "title": "Job Application",
+      "description": "Record of a job application",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "companyName": { "type": "string" },
+        "role": { "type": "string" },
+        "status": {
+          "type": "string",
+          "enum": ["Interested", "Applied", "Interviewing", "Offer", "Rejected", "Accepted"]
+        },
+        "draftedLetter": { "type": "string" },
+        "notes": { "type": "string" },
+        "appliedDate": { "type": "string", "format": "date-time" },
+        "lastModified": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "companyName", "role", "status"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "User profile documents"
+    },
+    "/applications/{applicationId}": {
+      "schema": "Application",
+      "description": "User application records"
+    }
+  }
+}

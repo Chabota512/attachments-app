@@ -14,3 +14,159 @@ import * as zod from "zod";
 export const HealthCheckResponse = zod.object({
   status: zod.string(),
 });
+
+/**
+ * @summary Find nearby companies using AI
+ */
+export const DiscoverCompaniesBody = zod.object({
+  latitude: zod.number(),
+  longitude: zod.number(),
+  degree: zod.string(),
+  institution: zod.string().optional(),
+  yearOfStudy: zod.string().optional(),
+  skills: zod.string().optional(),
+  city: zod.string().optional(),
+  preferredIndustries: zod.string().optional(),
+  goals: zod.string().optional(),
+});
+
+export const DiscoverCompaniesResponseItem = zod.object({
+  name: zod.string(),
+  description: zod.string(),
+  fitScore: zod.string(),
+  website: zod.string().nullish(),
+});
+export const DiscoverCompaniesResponse = zod.array(
+  DiscoverCompaniesResponseItem,
+);
+
+/**
+ * @summary Draft or polish an application letter using AI
+ */
+export const DraftLetterBody = zod.object({
+  companyName: zod.string(),
+  role: zod.string(),
+  degree: zod.string(),
+  goals: zod.string(),
+  institution: zod.string().optional(),
+  yearOfStudy: zod.string().optional(),
+  skills: zod.string().optional(),
+  portfolioUrl: zod.string().optional(),
+  userDraft: zod.string().optional(),
+});
+
+export const DraftLetterResponse = zod.object({
+  letter: zod.string(),
+});
+
+/**
+ * @summary Research a company using AI
+ */
+export const ResearchCompanyBody = zod.object({
+  companyName: zod.string(),
+});
+
+export const ResearchCompanyResponse = zod.object({
+  summary: zod.string(),
+});
+
+/**
+ * @summary Get AI feedback on a STAR-format interview answer
+ */
+export const StarFeedbackBody = zod.object({
+  question: zod.string(),
+  situation: zod.string(),
+  task: zod.string(),
+  action: zod.string(),
+  result: zod.string(),
+});
+
+export const StarFeedbackResponse = zod.object({
+  feedback: zod.string(),
+});
+
+/**
+ * @summary Conversational AI profile setup assistant
+ */
+export const ProfileChatBody = zod.object({
+  messages: zod.array(
+    zod.object({
+      role: zod.string(),
+      content: zod.string(),
+    }),
+  ),
+});
+
+export const ProfileChatResponse = zod.object({
+  reply: zod.string(),
+  isComplete: zod.boolean(),
+  profileData: zod
+    .object({
+      displayName: zod.string().optional(),
+      currentDegree: zod.string().optional(),
+      institution: zod.string().optional(),
+      yearOfStudy: zod.string().optional(),
+      skills: zod.string().optional(),
+      city: zod.string().optional(),
+      preferredIndustries: zod.string().optional(),
+      careerGoals: zod.string().optional(),
+      portfolioUrl: zod.string().optional(),
+      profileFields: zod
+        .array(
+          zod.object({
+            label: zod.string(),
+            value: zod.string(),
+          }),
+        )
+        .optional(),
+    })
+    .optional(),
+});
+
+/**
+ * @summary Find real networking events from the internet
+ */
+export const FindNetworkingEventsBody = zod.object({
+  city: zod.string(),
+  degree: zod.string().optional(),
+  preferredIndustries: zod.string().optional(),
+  goals: zod.string().optional(),
+});
+
+export const FindNetworkingEventsResponseItem = zod.object({
+  id: zod.string(),
+  title: zod.string(),
+  eventType: zod.string(),
+  organizer: zod.string(),
+  dateLabel: zod.string(),
+  dateIso: zod.string().optional(),
+  location: zod.string(),
+  description: zod.string().optional(),
+  url: zod.string().optional(),
+  source: zod.string().optional(),
+  tags: zod.array(zod.string()).optional(),
+  isOnline: zod.boolean().optional(),
+});
+export const FindNetworkingEventsResponse = zod.array(
+  FindNetworkingEventsResponseItem,
+);
+
+/**
+ * @summary Generate interview questions for a company and role
+ */
+export const InterviewQuestionsBody = zod.object({
+  companyName: zod.string(),
+  role: zod.string(),
+  degree: zod.string(),
+  goals: zod.string(),
+  institution: zod.string().optional(),
+  yearOfStudy: zod.string().optional(),
+  skills: zod.string().optional(),
+  researchSummary: zod.string().optional(),
+});
+
+export const InterviewQuestionsResponse = zod.object({
+  personal: zod.array(zod.string()),
+  company: zod.array(zod.string()),
+  experience: zod.array(zod.string()),
+});

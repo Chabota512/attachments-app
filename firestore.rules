@@ -1,0 +1,70 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Default deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    // User Profile Rules
+    match /users/{userId} {
+      allow get: if isOwner(userId);
+      allow create, update: if isOwner(userId)
+        && isValidUser(request.resource.data);
+      
+      function isValidUser(data) {
+        let keys = data.keys();
+        return keys.hasAll(['uid', 'email'])
+          && data.uid == request.auth.uid
+          && data.email is string
+          && (!keys.hasAny(['displayName']) || (data.displayName is string && data.displayName.size() <= 200))
+          && (!keys.hasAny(['currentDegree']) || (data.currentDegree is string && data.currentDegree.size() <= 200))
+          && (!keys.hasAny(['careerGoals']) || (data.careerGoals is string && data.careerGoals.size() <= 5000))
+          && (!keys.hasAny(['updatedAt']) || (data.updatedAt is string));
+      }
+    }
+
+    // Application Rules
+    match /applications/{applicationId} {
+      allow list: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow get: if isSignedIn() && resource.data.userId == request.auth.uid;
+      
+      allow create: if isSignedIn()
+        && request.resource.data.userId == request.auth.uid
+        && isValidApplication(request.resource.data);
+        
+      allow update: if isSignedIn()
+        && resource.data.userId == request.auth.uid
+        && request.resource.data.userId == request.auth.uid
+        && isValidApplication(request.resource.data);
+        
+      allow delete: if isSignedIn() && resource.data.userId == request.auth.uid;
+
+      function isValidApplication(data) {
+        let keys = data.keys();
+        return keys.hasAll(['userId', 'companyName', 'role', 'status'])
+          && data.userId == request.auth.uid
+          && data.companyName is string && data.companyName.size() <= 200
+          && data.role is string && data.role.size() <= 200
+          && data.status in ['Interested', 'Applied', 'Interviewing', 'Offer', 'Rejected', 'Accepted']
+          && (!keys.hasAny(['draftedLetter']) || (data.draftedLetter is string && data.draftedLetter.size() <= 10000))
+          && (!keys.hasAny(['notes']) || (data.notes is string && data.notes.size() <= 5000))
+          && (!keys.hasAny(['lastModified']) || (data.lastModified is string))
+          && (!keys.hasAny(['appliedDate']) || (data.appliedDate == null || data.appliedDate is string));
+      }
+    }
+  }
+}
