@@ -399,7 +399,12 @@ Make sure:
 - The JSON is valid with double quotes throughout
 - All values are strings (never null or arrays in the JSON)
 - displayName, currentDegree, institution, yearOfStudy, skills, city, preferredIndustries, careerGoals, portfolioUrl are always included (use "" if not provided)
-- profileFields captures everything — it is the complete profile record`;
+- profileFields captures everything — it is the complete profile record
+
+AFTER EVERY SINGLE RESPONSE (including partial ones before the conversation is complete), also output on a SEPARATE LINE:
+PARTIAL_PROFILE:{"displayName":"...","currentDegree":"...","institution":"...","yearOfStudy":"...","skills":"...","city":"...","preferredIndustries":"...","careerGoals":"...","portfolioUrl":"...","profileFields":[{"label":"...","value":"..."},...]}
+
+This must appear after every response — it is a live snapshot of everything collected so far. Use "" for fields not yet gathered. Keep the JSON on ONE LINE.`;
 
   const FIRST_AI_MESSAGE = `Hi! I'm Career Compass AI. I'll ask you a few quick questions to set up your profile — it only takes 2 minutes, and the more I know about you, the better I can match you with WIL opportunities.\n\nLet's start — what's your full name?`;
 
@@ -425,23 +430,39 @@ Continue as Career Compass AI (write only your next response, nothing else):`;
       model: "gemini-2.5-flash",
       contents: prompt,
     });
-    const text = response.text ?? "";
+    let text = response.text ?? "";
 
+    // Extract PARTIAL_PROFILE (present in every response)
+    let partialProfile: Record<string, unknown> | null = null;
+    const partialMarker = "PARTIAL_PROFILE:";
+    const partialIdx = text.indexOf(partialMarker);
+    if (partialIdx !== -1) {
+      const partialJsonStr = text.slice(partialIdx + partialMarker.length).split("\n")[0].trim();
+      try {
+        partialProfile = JSON.parse(partialJsonStr);
+      } catch {
+        req.log.warn({ partialJsonStr }, "Failed to parse PARTIAL_PROFILE JSON");
+      }
+      // Strip the PARTIAL_PROFILE line from the visible text
+      text = text.slice(0, partialIdx).trim();
+    }
+
+    // Check for PROFILE_COMPLETE
     const marker = "PROFILE_COMPLETE:";
     const markerIndex = text.indexOf(marker);
     if (markerIndex !== -1) {
       const reply = text.slice(0, markerIndex).trim();
-      const jsonStr = text.slice(markerIndex + marker.length).trim();
+      const jsonStr = text.slice(markerIndex + marker.length).split("\n")[0].trim();
       try {
         const profileData = JSON.parse(jsonStr);
-        res.json({ reply, isComplete: true, profileData });
+        res.json({ reply, isComplete: true, profileData, partialProfile: profileData });
         return;
       } catch {
         req.log.warn({ jsonStr }, "Failed to parse PROFILE_COMPLETE JSON");
       }
     }
 
-    res.json({ reply: text, isComplete: false });
+    res.json({ reply: text, isComplete: false, partialProfile });
   } catch (err) {
     req.log.error({ err }, "profile-chat failed");
     res.status(500).json({ error: "Failed to get AI response" });
