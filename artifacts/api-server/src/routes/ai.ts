@@ -12,6 +12,91 @@ import {
 
 const router = Router();
 
+// ─── External search helpers ──────────────────────────────────────────────────
+
+async function fetchSerperEvents(query: string): Promise<string> {
+  const key = process.env.SERPER_API_KEY;
+  if (!key) return "";
+  const res = await fetch("https://google.serper.dev/search", {
+    method: "POST",
+    headers: { "X-API-KEY": key, "Content-Type": "application/json" },
+    body: JSON.stringify({ q: query, gl: "za", hl: "en", num: 10 }),
+    signal: AbortSignal.timeout(10000),
+  });
+  if (!res.ok) return "";
+  const data = (await res.json()) as { organic?: { title: string; link: string; snippet: string; date?: string }[] };
+  return (data.organic ?? [])
+    .map((r, i) => `[Serper ${i + 1}] ${r.title}\nURL: ${r.link}\n${r.date ? "Date: " + r.date + "\n" : ""}${r.snippet}`)
+    .join("\n---\n");
+}
+
+async function fetchEventbriteEvents(city: string, query: string): Promise<string> {
+  const key = process.env.EVENTBRITE_API_KEY;
+  if (!key) return "";
+  const today = new Date().toISOString().split("T")[0];
+  const locationParam = city && city.toLowerCase() !== "south africa"
+    ? `${city}, South Africa`
+    : "South Africa";
+  const url = new URL("https://www.eventbriteapi.com/v3/events/search/");
+  url.searchParams.set("q", query);
+  url.searchParams.set("location.address", locationParam);
+  url.searchParams.set("start_date.range_start", `${today}T00:00:00`);
+  url.searchParams.set("expand", "venue");
+  url.searchParams.set("page_size", "15");
+  const res = await fetch(url.toString(), {
+    headers: { Authorization: `Bearer ${key}` },
+    signal: AbortSignal.timeout(10000),
+  });
+  if (!res.ok) return "";
+  const data = (await res.json()) as {
+    events?: {
+      name: { text: string };
+      description?: { text: string };
+      url: string;
+      start: { local: string };
+      venue?: { name: string; address?: { city: string; country: string } };
+      is_online_event: boolean;
+    }[];
+  };
+  return (data.events ?? [])
+    .map((e, i) => {
+      const loc = e.is_online_event
+        ? "Online"
+        : [e.venue?.name, e.venue?.address?.city, e.venue?.address?.country].filter(Boolean).join(", ");
+      return `[Eventbrite ${i + 1}] ${e.name.text}\nDate: ${e.start.local}\nLocation: ${loc}\nURL: ${e.url}\n${e.description?.text?.slice(0, 200) ?? ""}`;
+    })
+    .join("\n---\n");
+}
+
+async function fetchTavilyEvents(query: string): Promise<string> {
+  const key = process.env.TAVILY_API_KEY;
+  if (!key) return "";
+  const res = await fetch("https://api.tavily.com/search", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      api_key: key,
+      query,
+      search_depth: "advanced",
+      max_results: 10,
+      include_domains: [
+        "eventbrite.co.za", "eventbrite.com", "meetup.com", "bizcommunity.com",
+        "saica.co.za", "ecsa.co.za", "iitpsa.org.za", "africarena.com",
+        "africa.comworldseries.com", "careerjunction.co.za", "siliconcape.com",
+        "theinnovationhub.com", "bandwidthbarn.com", "launchlab.co.za",
+      ],
+    }),
+    signal: AbortSignal.timeout(15000),
+  });
+  if (!res.ok) return "";
+  const data = (await res.json()) as { results?: { title: string; url: string; content: string; published_date?: string }[] };
+  return (data.results ?? [])
+    .map((r, i) => `[Tavily ${i + 1}] ${r.title}\nURL: ${r.url}\n${r.published_date ? "Published: " + r.published_date + "\n" : ""}${r.content.slice(0, 300)}`)
+    .join("\n---\n");
+}
+
+// ─── Routes ───────────────────────────────────────────────────────────────────
+
 router.post("/ai/discover-companies", async (req, res) => {
   const parsed = DiscoverCompaniesBody.safeParse(req.body);
   if (!parsed.success) {
@@ -363,70 +448,14 @@ Continue as Career Compass AI (write only your next response, nothing else):`;
   }
 });
 
-// ─────────────────────────────────────────────────────────────────────────────
-// NETWORKING EVENTS — API & DATA SOURCE REFERENCE
-//
-// PRIMARY (already active):
-//   • Gemini 2.5 Flash + Google Search Grounding
-//     How it works: Gemini searches the live internet via Google's index, which
-//     covers Facebook Events, LinkedIn Events, Eventbrite, Meetup.com, company
-//     websites, university portals, and government/chamber sites.
-//     Setup: AI_INTEGRATIONS_GEMINI_BASE_URL and AI_INTEGRATIONS_GEMINI_API_KEY
-//     are set automatically via the Replit Gemini integration.
-//     Note: pass config.tools: [{ googleSearch: {} }] to enable live search.
-//
-// RECOMMENDED ADDITIONS (add as environment secrets to improve coverage):
-//
-//   1. Eventbrite API — eventbrite.com/platform/api
-//      What: Real event listings, free tier available (1,000 req/day).
-//      South Africa coverage: strong — Eventbrite is widely used in SA.
-//      Secret to add: EVENTBRITE_API_KEY
-//      Endpoint: GET https://www.eventbriteapi.com/v3/events/search/
-//        ?location.address=Johannesburg,South+Africa&q={query}&token={key}
-//
-//   2. Serper.dev — serper.dev
-//      What: Google Search API wrapper (fast, 2,500 free searches/month).
-//      Advantage: Broader coverage; can target SA sites
-//        (e.g. site:bizcommunity.com OR site:careers24.com events).
-//      Secret to add: SERPER_API_KEY
-//      Endpoint: POST https://google.serper.dev/search
-//        { q: "networking events South Africa", gl: "za", hl: "en", num: 10 }
-//
-//   3. Tavily — tavily.com
-//      What: AI-powered web search designed for LLM pipelines (1,000 free/month).
-//      Secret to add: TAVILY_API_KEY
-//      Endpoint: POST https://api.tavily.com/search
-//        { query: "...", search_depth: "advanced", include_domains: ["eventbrite.com","meetup.com","bizcommunity.com"] }
-//
-//   4. Meetup.com API — meetup.com/api/guide
-//      What: Networking meetups specifically. Free read-only tier.
-//      Secret to add: MEETUP_API_KEY
-//      Endpoint: GET https://api.meetup.com/find/upcoming_events
-//        ?lat=-26.2041&lon=28.0473&radius=100&text={query}
-//        (Johannesburg coordinates; adjust per city)
-//
-//   5. Google Custom Search API — developers.google.com/custom-search
-//      What: Programmable Google Search; 100 free queries/day, then $5/1000.
-//      Secret to add: GOOGLE_SEARCH_API_KEY + GOOGLE_CSE_ID
-//      Endpoint: GET https://www.googleapis.com/customsearch/v1
-//        ?key={key}&cx={cse_id}&q=networking+events+South+Africa+2025
-//
-// SOUTH AFRICA-SPECIFIC SOURCES (no API — use Gemini/Serper to scrape):
-//   • Bizcommunity           — bizcommunity.com (events section)
-//   • Careers24 events       — careers24.com
-//   • CareerJunction         — careerjunction.co.za
-//   • Innovation Hub         — theinnovationhub.com (Pretoria)
-//   • Silicon Cape           — siliconcape.com (Cape Town tech)
-//   • Bandwidth Barn         — bandwidthbarn.com (Cape Town)
-//   • LaunchLab Stellenbosch — launchlab.co.za
-//   • SAICA events           — saica.co.za
-//   • ECSA events            — ecsa.co.za
-//   • IITPSA events          — iitpsa.org.za
-//   • UCT career portal      — uct.ac.za
-//   • Wits career portal     — wits.ac.za
-//   • UP career portal       — up.ac.za
-//   • AfricaCom              — africa.comworldseries.com
-//   • AfricArena             — africarena.com
+// ─── NETWORKING EVENTS ────────────────────────────────────────────────────────
+// Data sources (in priority order):
+//   1. Eventbrite API     — real structured SA event listings
+//   2. Serper.dev         — live Google Search results for SA events
+//   3. Tavily             — AI-powered deep search across SA-specific domains
+//   4. Gemini grounding   — fallback; Gemini searches the web via Google Search
+// All external calls run in parallel. Failures are silent — Gemini grounding
+// handles the load if the other sources are unavailable.
 // ─────────────────────────────────────────────────────────────────────────────
 
 router.post("/ai/networking-events", async (req, res) => {
@@ -446,7 +475,31 @@ router.post("/ai/networking-events", async (req, res) => {
 
   const locationContext = city && city.toLowerCase() !== "south africa"
     ? `Primary location: ${city}, South Africa. Also include events elsewhere in South Africa and relevant African or international events the student could attend or join online.`
-    : `Primary location: South Africa (Johannesburg, Cape Town, Durban, Pretoria, Port Elizabeth/Gqeberha, Bloemfontein, East London, and other cities). Also include relevant international events accessible online.`;
+    : `Primary location: South Africa (Johannesburg, Cape Town, Durban, Pretoria, Port Elizabeth/Gqeberha, Bloemfontein, East London, Stellenbosch, and other cities). Also include relevant international events accessible online.`;
+
+  const searchQuery = [
+    "career networking events",
+    city && city.toLowerCase() !== "south africa" ? city : "South Africa",
+    degree ? degree.split(" ").slice(-2).join(" ") : "",
+    "2025 2026",
+  ].filter(Boolean).join(" ");
+
+  // Fetch from all external APIs in parallel — failures are silently ignored
+  const [serperResult, eventbriteResult, tavilyResult] = await Promise.allSettled([
+    fetchSerperEvents(searchQuery),
+    fetchEventbriteEvents(city ?? "", "career networking professional development"),
+    fetchTavilyEvents(`career networking events South Africa ${city ?? ""} 2025 2026`),
+  ]);
+
+  const serperData = serperResult.status === "fulfilled" ? serperResult.value : "";
+  const eventbriteData = eventbriteResult.status === "fulfilled" ? eventbriteResult.value : "";
+  const tavilyData = tavilyResult.status === "fulfilled" ? tavilyResult.value : "";
+
+  const externalContext = [
+    eventbriteData && `=== EVENTBRITE LISTINGS ===\n${eventbriteData}`,
+    serperData && `=== GOOGLE SEARCH RESULTS (Serper) ===\n${serperData}`,
+    tavilyData && `=== WEB SEARCH RESULTS (Tavily) ===\n${tavilyData}`,
+  ].filter(Boolean).join("\n\n");
 
   const eventTypes = [
     "career-expo (Career Expos & Job Fairs)",
@@ -476,11 +529,12 @@ router.post("/ai/networking-events", async (req, res) => {
 Student profile:
 ${profileContext || "General student seeking WIL placement or graduate opportunities in South Africa"}
 ${locationContext}
-
+${externalContext ? `\nREAL EVENT DATA FROM LIVE SEARCHES (use this as your primary source — prefer these over your training data):\n${externalContext}\n` : ""}
 IMPORTANT INSTRUCTIONS:
-- Search the internet RIGHT NOW for real events and opportunities.
+- Use the real event data above as your PRIMARY source. Fill in any missing details from your knowledge.
+- If no real data was provided above, search the internet NOW for real events and opportunities.
 - Prioritise South Africa (Johannesburg, Cape Town, Durban, Pretoria, Port Elizabeth/Gqeberha, Bloemfontein, East London, Stellenbosch, etc.) but include any African or international events that are valuable.
-- Cast a WIDE net — do not limit results to only what matches the student's exact degree. Many career paths cross industries, and students benefit from diverse exposure.
+- Cast a WIDE net — do not limit results to only what matches the student's exact degree.
 - Search across: Facebook Events SA, LinkedIn Events, Eventbrite South Africa, Meetup.com, Bizcommunity (bizcommunity.com), Innovation Hub Pretoria, Silicon Cape, CareerJunction, SAICA (saica.co.za), ECSA (ecsa.co.za), IITPSA (iitpsa.org.za), university career portals (UCT, Wits, UP, Stellenbosch, UJ, DUT, CPUT, TUT, UKZN), AfricArena, AfricaCom, company career pages, and any other relevant South African or African platform.
 - Include opportunities the student may not have thought to look for: hackathons, alumni events, webinars, startup pitch competitions, professional association meetings, mentorship programmes, open days, awards dinners, trade fairs, volunteer/community events, training courses, bursary info sessions, and more.
 - For online/virtual events, mark isOnline as true.
@@ -492,22 +546,21 @@ Return ONLY a valid JSON array (no markdown, no code fences, no explanation). Ea
 - organizer: name of the hosting organisation, company, or institution
 - dateLabel: human-readable date (e.g. "Sat, 17 May 2025" or "15–17 May 2025" or "Ongoing" for programmes)
 - dateIso: ISO 8601 string (e.g. "2025-05-17T09:00:00") or "" if unknown
-- location: full venue + city (e.g. "BongoHive, Lusaka" or "Online / Zoom")
+- location: full venue + city (e.g. "Sandton Convention Centre, Johannesburg" or "Online / Zoom")
 - description: 1–2 sentences explaining what it is and why it matters for the student
 - url: a direct, working URL to the event page or registration (must be a real URL, not a homepage)
-- source: platform where you found it (e.g. "Eventbrite", "Facebook Events", "BongoHive", "LinkedIn")
-- tags: array of 3–5 keyword strings (e.g. ["technology", "networking", "Zambia", "startups"])
+- source: platform where you found it (e.g. "Eventbrite", "Serper", "Bizcommunity", "LinkedIn")
+- tags: array of 3–5 keyword strings relevant to South Africa and the event (e.g. ["technology", "networking", "Johannesburg", "startups"])
 - isOnline: true if virtual, false if in-person
 
-Only include events happening AFTER today (${today}). Return 8–15 diverse results. If events in Zambia are limited, supplement with high-value African or international online events. Return [] only if absolutely nothing real is found.`;
+Only include events happening AFTER today (${today}). Return 8–15 diverse results. If local events are limited, supplement with high-value African or international online events. Return [] only if absolutely nothing real is found.`;
 
   try {
+    const useGrounding = !externalContext;
     const response = await ai.models.generateContent({
       model: "gemini-2.5-flash",
       contents: prompt,
-      config: {
-        tools: [{ googleSearch: {} }],
-      },
+      ...(useGrounding && { config: { tools: [{ googleSearch: {} }] } }),
     });
     const text = response.text ?? "";
     const jsonMatch = text.match(/\[[\s\S]*\]/);
