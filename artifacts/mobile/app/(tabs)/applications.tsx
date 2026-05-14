@@ -21,6 +21,7 @@ import { useMutation } from '@tanstack/react-query';
 
 import { useApp, Application, ApplicationStatus } from '@/context/AppContext';
 import { useColors } from '@/hooks/useColors';
+import { getApiBase } from '@/constants/config';
 
 const ALL_STATUSES: ApplicationStatus[] = ['Interested', 'Applied', 'Interviewing', 'Offer', 'Rejected', 'Accepted'];
 
@@ -35,7 +36,6 @@ const STATUS_META: Record<ApplicationStatus, { color: string; bg: string; border
 
 function daysUntil(d: string) { return (new Date(d).getTime() - Date.now()) / 864e5; }
 function daysSince(d: string) { return (Date.now() - new Date(d).getTime()) / 864e5; }
-function getApiBase() { const d = process.env.EXPO_PUBLIC_DOMAIN; return d ? `https://${d}` : ''; }
 
 type DetailTab = 'overview' | 'research' | 'interview' | 'letter';
 

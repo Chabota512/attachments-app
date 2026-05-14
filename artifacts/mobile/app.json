@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "Career Compass",
-    "slug": "career-compass-mobile",
+    "slug": "attachments-app",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
@@ -22,7 +22,11 @@
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/icon.png",
         "backgroundColor": "#09091f"
-      }
+      },
+      "permissions": [
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_FINE_LOCATION"
+      ]
     },
     "web": {
       "favicon": "./assets/images/icon.png"
@@ -41,6 +45,12 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
-    }
+    },
+    "extra": {
+      "eas": {
+        "projectId": "bdd5a2bb-baf6-421c-9e9a-c0bd3fe44fbf"
+      }
+    },
+    "owner": "chabota512s-organization"
   }
 }

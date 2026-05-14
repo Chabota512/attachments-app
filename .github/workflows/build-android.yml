@@ -29,7 +29,17 @@ jobs:
         uses: expo/expo-github-action@v8
         with:
           eas-version: latest
-          token: ${{ secrets.EXPO_TOKEN }}
+          token: ${{ secrets.EXPO_TOKEN || secrets.EAS_TOKEN }}
+
+      - name: Validate Expo/EAS token
+        run: |
+          if [ -z "$EXPO_TOKEN" ] && [ -z "$EAS_TOKEN" ]; then
+            echo "ERROR: Missing Expo/EAS token. Set repository secret EXPO_TOKEN or EAS_TOKEN."
+            exit 1
+          fi
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+          EAS_TOKEN: ${{ secrets.EAS_TOKEN }}
 
       - name: Build Android APK via EAS (waits for completion)
         id: eas_build
@@ -40,16 +50,22 @@ jobs:
             --profile preview \
             --non-interactive \
             --wait \
-            --json 2>/dev/null)
+            --json)
           echo "$BUILD_JSON" > eas-build-result.json
-          APK_URL=$(echo "$BUILD_JSON" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('artifacts',{}).get('buildUrl',''))" 2>/dev/null || echo "")
+          APK_URL=$(echo "$BUILD_JSON" | python3 -c "import sys,json; d=json.load(sys.stdin); artifacts=d.get('artifacts', {}); print(artifacts.get('url') or artifacts.get('archiveUrl') or artifacts.get('buildUrl') or '')" 2>/dev/null || echo "")
           echo "apk_url=$APK_URL" >> $GITHUB_OUTPUT
         env:
-          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN || secrets.EAS_TOKEN }}
+          EAS_TOKEN: ${{ secrets.EAS_TOKEN || secrets.EXPO_TOKEN }}
 
       - name: Download APK
         working-directory: artifacts/mobile
-        run: curl -L "${{ steps.eas_build.outputs.apk_url }}" -o career-compass.apk
+        run: |
+          if [ -z "${{ steps.eas_build.outputs.apk_url }}" ]; then
+            echo "ERROR: APK download URL is missing. Check eas-build-result.json for build output." >&2
+            exit 1
+          fi
+          curl -L "${{ steps.eas_build.outputs.apk_url }}" -o career-compass.apk
 
       - name: Upload APK as GitHub artifact
         uses: actions/upload-artifact@v4

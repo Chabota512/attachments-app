@@ -17,6 +17,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useApp } from '@/context/AppContext';
 import { useColors } from '@/hooks/useColors';
+import { getApiBase } from '@/constants/config';
 
 interface ChatMessage {
   role: 'user' | 'assistant';
@@ -27,11 +28,6 @@ const FIRST_MESSAGE: ChatMessage = {
   role: 'assistant',
   content: `Hi! I'm Career Compass AI. I'll ask you a few quick questions to set up your profile — it only takes 2 minutes, and the more I know about you, the better I can match you with WIL opportunities.\n\nLet's start — what's your full name?`,
 };
-
-function getApiBase() {
-  const d = process.env.EXPO_PUBLIC_DOMAIN;
-  return d ? `https://${d}` : '';
-}
 
 function useVoiceInput(onTranscript: (text: string) => void) {
   const [isListening, setIsListening] = useState(false);

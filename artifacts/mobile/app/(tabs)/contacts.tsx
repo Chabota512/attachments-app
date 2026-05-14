@@ -20,6 +20,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useApp, Contact } from '@/context/AppContext';
 import { useColors } from '@/hooks/useColors';
+import { getApiBase } from '@/constants/config';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -163,9 +164,9 @@ export default function NetworkScreen() {
     else setIsLoading(true);
     setFetchError(null);
     try {
-      const domain = process.env.EXPO_PUBLIC_DOMAIN;
+      const apiBase = getApiBase();
       const res = await fetch(
-        `https://${domain}/api/ai/networking-events`,
+        `${apiBase}/api/ai/networking-events`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },

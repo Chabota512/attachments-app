@@ -19,6 +19,7 @@ import { useMutation } from '@tanstack/react-query';
 
 import { useApp } from '@/context/AppContext';
 import { useColors } from '@/hooks/useColors';
+import { getApiBase } from '@/constants/config';
 
 interface CompanyResult {
   name: string;
@@ -32,11 +33,6 @@ const FIT_META: Record<string, { color: string; bg: string; border: string; icon
   'Strong Fit':    { color: '#6366f1', bg: 'rgba(99,102,241,0.14)', border: 'rgba(99,102,241,0.25)', icon: 'trending-up' },
   'Good Fit':      { color: '#3b82f6', bg: 'rgba(59,130,246,0.14)', border: 'rgba(59,130,246,0.25)', icon: 'thumbs-up' },
 };
-
-function getApiBase() {
-  const d = process.env.EXPO_PUBLIC_DOMAIN;
-  return d ? `https://${d}` : '';
-}
 
 async function getLocation(): Promise<{ latitude: number; longitude: number }> {
   if (Platform.OS === 'web') {
