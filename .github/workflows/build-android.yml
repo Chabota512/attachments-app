@@ -56,30 +56,27 @@ jobs:
           echo "$BUILD_JSON" | head -c 500
           echo ""
           echo "------------------------------------------"
-          APK_URL=$(echo "$BUILD_JSON" | python3 - <<'PYEOF'
+          APK_URL=$(echo "$BUILD_JSON" | python3 -c "
 import sys, json
 raw = sys.stdin.read().strip()
 try:
     d = json.loads(raw)
-except Exception as e:
-    print("", end="")
+except Exception:
+    print('', end='')
     sys.exit(0)
-# eas build --json returns either a list or a single object
 if isinstance(d, list):
     d = d[0] if d else {}
-# Try every known field name EAS has used across versions
-artifacts = d.get("artifacts") or {}
+artifacts = d.get('artifacts') or {}
 url = (
-    artifacts.get("buildUrl")
-    or artifacts.get("url")
-    or artifacts.get("archiveUrl")
-    or d.get("buildUrl")
-    or d.get("url")
-    or ""
+    artifacts.get('buildUrl')
+    or artifacts.get('url')
+    or artifacts.get('archiveUrl')
+    or d.get('buildUrl')
+    or d.get('url')
+    or ''
 )
-print(url, end="")
-PYEOF
-)
+print(url, end='')
+")
           echo "apk_url=$APK_URL" >> $GITHUB_OUTPUT
           if [ -z "$APK_URL" ]; then
             echo "WARNING: Could not parse APK URL from EAS output. Full JSON saved to eas-build-result.json artifact."
