@@ -37,6 +37,130 @@ const STATUS_META: Record<ApplicationStatus, { color: string; bg: string; border
 function daysUntil(d: string) { return (new Date(d).getTime() - Date.now()) / 864e5; }
 function daysSince(d: string) { return (Date.now() - new Date(d).getTime()) / 864e5; }
 
+const CAL_MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const CAL_DAYS = ['M','T','W','T','F','S','S'];
+
+function DatePickerField({
+  value,
+  onChange,
+  placeholder = 'Set deadline (optional)',
+  colors,
+}: {
+  value: string;
+  onChange: (iso: string) => void;
+  placeholder?: string;
+  colors: ReturnType<typeof useColors>;
+}) {
+  const [open, setOpen] = useState(false);
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  const parsedValue = value ? (() => { const d = new Date(value); d.setHours(0,0,0,0); return isNaN(d.getTime()) ? null : d; })() : null;
+  const [cursor, setCursor] = useState(() => {
+    const d = parsedValue ?? today;
+    return new Date(d.getFullYear(), d.getMonth(), 1);
+  });
+  const year = cursor.getFullYear();
+  const month = cursor.getMonth();
+  const firstDow = new Date(year, month, 1).getDay();
+  const startOffset = firstDow === 0 ? 6 : firstDow - 1;
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const cells: (number | null)[] = [
+    ...Array(startOffset).fill(null),
+    ...Array.from({ length: daysInMonth }, (_, i) => i + 1),
+  ];
+  while (cells.length % 7 !== 0) cells.push(null);
+  const displayValue = parsedValue
+    ? parsedValue.toLocaleDateString('en-ZA', { day: 'numeric', month: 'short', year: 'numeric' })
+    : '';
+  return (
+    <View style={{ marginBottom: open ? 0 : 18 }}>
+      <Pressable
+        style={{
+          flexDirection: 'row', alignItems: 'center', gap: 10,
+          backgroundColor: colors.muted, borderRadius: 14, padding: 16,
+          borderWidth: 1, borderColor: open ? colors.primary : colors.border,
+        }}
+        onPress={() => { Haptics.selectionAsync(); setOpen(o => !o); }}
+        accessibilityLabel="Select deadline date"
+        accessibilityRole="button"
+      >
+        <Feather name="calendar" size={16} color={displayValue ? colors.primary : colors.textMuted} />
+        <Text style={{ flex: 1, fontSize: 15, fontFamily: 'Inter_400Regular', color: displayValue ? colors.text : colors.textMuted }}>
+          {displayValue || placeholder}
+        </Text>
+        {displayValue ? (
+          <Pressable
+            onPress={() => { onChange(''); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
+            hitSlop={10}
+            accessibilityLabel="Clear date"
+            accessibilityRole="button"
+          >
+            <Feather name="x" size={14} color={colors.textMuted} />
+          </Pressable>
+        ) : null}
+        <Feather name={open ? 'chevron-up' : 'chevron-down'} size={14} color={colors.textMuted} />
+      </Pressable>
+      {open && (
+        <View style={{
+          backgroundColor: colors.card, borderWidth: 1, borderColor: colors.primary,
+          borderTopWidth: 0, borderBottomLeftRadius: 14, borderBottomRightRadius: 14,
+          overflow: 'hidden', marginBottom: 18,
+        }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: colors.divider }}>
+            <Pressable onPress={() => { setCursor(new Date(year, month - 1, 1)); Haptics.selectionAsync(); }} hitSlop={8} accessibilityLabel="Previous month">
+              <Feather name="chevron-left" size={18} color={colors.textMuted} />
+            </Pressable>
+            <Text style={{ flex: 1, textAlign: 'center', fontSize: 14, fontFamily: 'Inter_700Bold', color: colors.text }}>
+              {CAL_MONTHS[month]} {year}
+            </Text>
+            <Pressable onPress={() => { setCursor(new Date(year, month + 1, 1)); Haptics.selectionAsync(); }} hitSlop={8} accessibilityLabel="Next month">
+              <Feather name="chevron-right" size={18} color={colors.textMuted} />
+            </Pressable>
+          </View>
+          <View style={{ flexDirection: 'row', paddingHorizontal: 8, paddingTop: 10, paddingBottom: 4 }}>
+            {CAL_DAYS.map((d, i) => (
+              <Text key={i} style={{ flex: 1, textAlign: 'center', fontSize: 10, fontFamily: 'Inter_700Bold', color: colors.textMuted }}>{d}</Text>
+            ))}
+          </View>
+          <View style={{ paddingHorizontal: 8, paddingBottom: 12 }}>
+            {Array.from({ length: cells.length / 7 }).map((_, rowI) => (
+              <View key={rowI} style={{ flexDirection: 'row' }}>
+                {cells.slice(rowI * 7, rowI * 7 + 7).map((day, colI) => {
+                  if (!day) return <View key={colI} style={{ flex: 1 }} />;
+                  const isSelected = parsedValue && parsedValue.getDate() === day && parsedValue.getMonth() === month && parsedValue.getFullYear() === year;
+                  const isToday = today.getDate() === day && today.getMonth() === month && today.getFullYear() === year;
+                  const isPast = new Date(year, month, day) < today;
+                  return (
+                    <Pressable
+                      key={colI}
+                      style={{ flex: 1, alignItems: 'center', paddingVertical: 5 }}
+                      onPress={() => { onChange(new Date(year, month, day).toISOString().split('T')[0]); setOpen(false); Haptics.selectionAsync(); }}
+                      accessibilityLabel={`${day} ${CAL_MONTHS[month]} ${year}`}
+                    >
+                      <View style={[
+                        { width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
+                        isSelected ? { backgroundColor: colors.primary } : null,
+                        isToday && !isSelected ? { borderWidth: 1.5, borderColor: colors.primary } : null,
+                      ]}>
+                        <Text style={[
+                          { fontSize: 13, fontFamily: 'Inter_400Regular', color: isPast && !isSelected ? colors.textMuted : colors.text },
+                          isSelected ? { color: '#fff', fontFamily: 'Inter_700Bold' } : null,
+                          isToday && !isSelected ? { color: colors.primary, fontFamily: 'Inter_600SemiBold' } : null,
+                        ]}>
+                          {day}
+                        </Text>
+                      </View>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            ))}
+          </View>
+        </View>
+      )}
+    </View>
+  );
+}
+
 type DetailTab = 'overview' | 'research' | 'interview' | 'letter';
 
 const DETAIL_TABS: { key: DetailTab; label: string; icon: string }[] = [
@@ -59,6 +183,13 @@ export default function ApplicationsScreen() {
   const [draftLetter, setDraftLetter] = useState('');
   const [editingNotes, setEditingNotes] = useState('');
   const [activeTab, setActiveTab] = useState<DetailTab>('overview');
+  const [aiErrors, setAiErrors] = useState<{ research?: string; interview?: string; letter?: string }>({});
+
+  const statusCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    for (const app of applications) counts[app.status] = (counts[app.status] ?? 0) + 1;
+    return counts;
+  }, [applications]);
 
   const topPad = Platform.OS === 'web' ? 67 : insets.top;
   const bottomPad = Platform.OS === 'web' ? 72 : insets.bottom + 56;
@@ -91,11 +222,12 @@ export default function ApplicationsScreen() {
       return (await res.json()).letter as string;
     },
     onSuccess: async (letter, app) => {
+      setAiErrors(e => ({ ...e, letter: undefined }));
       setDraftLetter(letter);
       await updateApplication(app.id, { draftedLetter: letter });
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     },
-    onError: () => Alert.alert('Could not draft letter', 'Check your internet connection and try again.'),
+    onError: () => { setAiErrors(e => ({ ...e, letter: 'Could not draft letter. Check your connection.' })); Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error); },
   });
 
   const researchMutation = useMutation({
@@ -108,11 +240,12 @@ export default function ApplicationsScreen() {
       return (await res.json()).summary as string;
     },
     onSuccess: async (summary, app) => {
+      setAiErrors(e => ({ ...e, research: undefined }));
       await updateApplication(app.id, { researchSummary: summary });
       setSelectedApp(prev => prev ? { ...prev, researchSummary: summary } : null);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     },
-    onError: () => Alert.alert('Research failed', 'Check your internet connection and try again.'),
+    onError: () => { setAiErrors(e => ({ ...e, research: 'Research failed. Check your connection.' })); Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error); },
   });
 
   const interviewMutation = useMutation({
@@ -135,11 +268,12 @@ export default function ApplicationsScreen() {
       return res.json() as Promise<{ personal: string[]; company: string[]; experience: string[] }>;
     },
     onSuccess: async (questions, app) => {
+      setAiErrors(e => ({ ...e, interview: undefined }));
       await updateApplication(app.id, { interviewQuestions: questions });
       setSelectedApp(prev => prev ? { ...prev, interviewQuestions: questions } : null);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     },
-    onError: () => Alert.alert('Could not generate questions', 'Check your internet connection and try again.'),
+    onError: () => { setAiErrors(e => ({ ...e, interview: 'Could not generate questions. Check your connection.' })); Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error); },
   });
 
   const handleAdd = async () => {
@@ -181,6 +315,7 @@ export default function ApplicationsScreen() {
     setDraftLetter(app.draftedLetter || '');
     setEditingNotes(app.notes || '');
     setActiveTab('overview');
+    setAiErrors({});
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
   };
 
@@ -240,7 +375,9 @@ export default function ApplicationsScreen() {
               android_ripple={{ color: meta?.bg || colors.indigoBg, borderless: false }}
             >
               {meta && isActive && <View style={[s.filterDot, { backgroundColor: meta.color }]} />}
-              <Text style={[s.filterChipText, isActive && (meta ? { color: meta.color } : s.filterChipTextActive)]}>{st}</Text>
+              <Text style={[s.filterChipText, isActive && (meta ? { color: meta.color } : s.filterChipTextActive)]}>
+                {st}{st !== 'All' && statusCounts[st] ? ` · ${statusCounts[st]}` : ''}
+              </Text>
             </Pressable>
           );
         })}
@@ -385,12 +522,10 @@ export default function ApplicationsScreen() {
               accessibilityLabel="Role or position"
             />
             <Text style={s.fieldLabel}>Application Deadline <Text style={s.fieldLabelOptional}>(optional)</Text></Text>
-            <TextInput
-              value={form.deadline} onChangeText={v => setForm(f => ({ ...f, deadline: v }))}
-              placeholder="YYYY-MM-DD"
-              placeholderTextColor={colors.textMuted}
-              style={s.field} keyboardType="numbers-and-punctuation"
-              accessibilityLabel="Application deadline date"
+            <DatePickerField
+              value={form.deadline}
+              onChange={v => setForm(f => ({ ...f, deadline: v }))}
+              colors={colors}
             />
             <View style={s.fieldHintRow}>
               <Feather name="info" size={12} color={colors.textMuted} />
@@ -487,7 +622,18 @@ export default function ApplicationsScreen() {
                       </View>
                     )}
 
-                    <Text style={[s.sectionHeading, { marginTop: 24 }]}>Notes</Text>
+                    <Text style={[s.sectionHeading, { marginTop: 20 }]}>Deadline</Text>
+                    <DatePickerField
+                      value={selectedApp.deadline ?? ''}
+                      onChange={async (iso) => {
+                        await updateApplication(selectedApp.id, { deadline: iso || undefined });
+                        setSelectedApp(prev => prev ? { ...prev, deadline: iso || undefined } : null);
+                      }}
+                      placeholder="No deadline set"
+                      colors={colors}
+                    />
+
+                    <Text style={[s.sectionHeading, { marginTop: 4 }]}>Notes</Text>
                     <TextInput
                       value={editingNotes}
                       onChangeText={setEditingNotes}
@@ -510,6 +656,15 @@ export default function ApplicationsScreen() {
                   <>
                     <Text style={s.sectionHeading}>Company Research</Text>
                     <Text style={s.sectionSubtitle}>AI-generated overview of {selectedApp.companyName} — including their WIL programmes and interview tips.</Text>
+                    {aiErrors.research && !researchMutation.isPending && (
+                      <View style={s.errorBanner}>
+                        <Feather name="wifi-off" size={14} color={colors.danger} />
+                        <Text style={s.errorBannerText}>{aiErrors.research}</Text>
+                        <Pressable onPress={() => { setAiErrors(e => ({ ...e, research: undefined })); researchMutation.mutate(selectedApp); }} style={s.retryBtn} accessibilityRole="button" accessibilityLabel="Retry research">
+                          <Text style={s.retryBtnText}>Retry</Text>
+                        </Pressable>
+                      </View>
+                    )}
                     {selectedApp.researchSummary ? (
                       <>
                         <View style={s.contentBox}>
@@ -548,6 +703,15 @@ export default function ApplicationsScreen() {
                   <>
                     <Text style={s.sectionHeading}>Interview Prep</Text>
                     <Text style={s.sectionSubtitle}>15 personalised questions for your interview at {selectedApp.companyName}.</Text>
+                    {aiErrors.interview && !interviewMutation.isPending && (
+                      <View style={s.errorBanner}>
+                        <Feather name="wifi-off" size={14} color={colors.danger} />
+                        <Text style={s.errorBannerText}>{aiErrors.interview}</Text>
+                        <Pressable onPress={() => { setAiErrors(e => ({ ...e, interview: undefined })); interviewMutation.mutate(selectedApp); }} style={s.retryBtn} accessibilityRole="button" accessibilityLabel="Retry interview questions">
+                          <Text style={s.retryBtnText}>Retry</Text>
+                        </Pressable>
+                      </View>
+                    )}
                     {selectedApp.interviewQuestions ? (
                       <>
                         {[
@@ -601,6 +765,15 @@ export default function ApplicationsScreen() {
                   <>
                     <Text style={s.sectionHeading}>Cover Letter</Text>
                     <Text style={s.sectionSubtitle}>AI-generated, tailored to {selectedApp.companyName} using your profile and degree.</Text>
+                    {aiErrors.letter && !draftMutation.isPending && (
+                      <View style={s.errorBanner}>
+                        <Feather name="wifi-off" size={14} color={colors.danger} />
+                        <Text style={s.errorBannerText}>{aiErrors.letter}</Text>
+                        <Pressable onPress={() => { setAiErrors(e => ({ ...e, letter: undefined })); draftMutation.mutate(selectedApp); }} style={s.retryBtn} accessibilityRole="button" accessibilityLabel="Retry cover letter">
+                          <Text style={s.retryBtnText}>Retry</Text>
+                        </Pressable>
+                      </View>
+                    )}
                     {draftLetter ? (
                       <>
                         <View style={s.contentBox}>
@@ -737,4 +910,8 @@ const styles = (colors: ReturnType<typeof useColors>) => StyleSheet.create({
   questionRow: { flexDirection: 'row', gap: 10, marginBottom: 10 },
   questionNum: { fontSize: 13, fontFamily: 'Inter_700Bold', minWidth: 20 },
   questionText: { flex: 1, fontSize: 13, fontFamily: 'Inter_400Regular', color: colors.textSecondary, lineHeight: 20 },
+  errorBanner: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: colors.dangerBg, borderRadius: 12, padding: 12, borderWidth: 1, borderColor: colors.dangerBorder, marginBottom: 16 },
+  errorBannerText: { flex: 1, fontSize: 12, fontFamily: 'Inter_400Regular', color: colors.danger, lineHeight: 17 },
+  retryBtn: { paddingHorizontal: 12, paddingVertical: 6, backgroundColor: colors.danger, borderRadius: 8 },
+  retryBtnText: { fontSize: 12, fontFamily: 'Inter_700Bold', color: '#fff' },
 });

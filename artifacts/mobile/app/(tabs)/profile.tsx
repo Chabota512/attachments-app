@@ -193,21 +193,19 @@ export default function ProfileScreen() {
   const derivedYear = getFieldValue(profileFields, 'year of study', 'year')
     ?? (profile?.yearOfStudy || '');
 
-  const completenessPercent = hasFields
-    ? Math.min(100, Math.round((profileFields.length / 10) * 100))
-    : Math.round(
-        [
-          !!profile?.displayName?.trim() && profile.displayName !== 'You',
-          !!profile?.currentDegree?.trim(),
-          !!profile?.institution?.trim(),
-          !!profile?.yearOfStudy?.trim(),
-          !!profile?.skills?.trim(),
-          !!profile?.city?.trim(),
-          !!profile?.preferredIndustries?.trim(),
-          !!profile?.careerGoals?.trim(),
-          !!profile?.portfolioUrl?.trim(),
-        ].filter(Boolean).length / 9 * 100
-      );
+  const coreScore = [
+    !!profile?.displayName?.trim() && profile.displayName !== 'You',
+    !!profile?.currentDegree?.trim(),
+    !!profile?.institution?.trim(),
+    !!profile?.yearOfStudy?.trim(),
+    !!profile?.skills?.trim(),
+    !!profile?.city?.trim(),
+    !!profile?.preferredIndustries?.trim(),
+    !!profile?.careerGoals?.trim(),
+    !!profile?.portfolioUrl?.trim(),
+  ].filter(Boolean).length;
+  const fieldScore = Math.min(profileFields.length, 10);
+  const completenessPercent = Math.min(100, Math.round(((coreScore + fieldScore) / 19) * 100));
 
   const openEdit = () => {
     setEditFields(profileFields.map(f => ({ ...f })));
