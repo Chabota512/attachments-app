@@ -49,7 +49,7 @@ Example format:
 
   try {
     const response = await ai.models.generateContent({
-      model: "gemini-2.0-flash",
+      model: "gemini-2.5-flash",
       contents: prompt,
     });
     const text = response.text ?? "";
@@ -112,7 +112,7 @@ Return ONLY the letter text — no subject line, no JSON, no markdown formatting
 
   try {
     const response = await ai.models.generateContent({
-      model: "gemini-2.0-flash",
+      model: "gemini-2.5-flash",
       contents: prompt,
     });
     res.json({ letter: response.text ?? "" });
@@ -153,7 +153,7 @@ Keep the summary practical and useful for a student applying for a WIL placement
 
   try {
     const response = await ai.models.generateContent({
-      model: "gemini-2.0-flash",
+      model: "gemini-2.5-flash",
       contents: prompt,
     });
     res.json({ summary: response.text ?? "" });
@@ -192,7 +192,7 @@ Keep your tone encouraging but direct. This is for a South African student prepa
 
   try {
     const response = await ai.models.generateContent({
-      model: "gemini-2.0-flash",
+      model: "gemini-2.5-flash",
       contents: prompt,
     });
     res.json({ feedback: response.text ?? "" });
@@ -244,7 +244,7 @@ experience: questions about their academic projects, teamwork, problem-solving, 
 
   try {
     const response = await ai.models.generateContent({
-      model: "gemini-2.0-flash",
+      model: "gemini-2.5-flash",
       contents: prompt,
     });
     const text = response.text ?? "";
@@ -337,7 +337,7 @@ Continue as Career Compass AI (write only your next response, nothing else):`;
 
   try {
     const response = await ai.models.generateContent({
-      model: "gemini-2.0-flash",
+      model: "gemini-2.5-flash",
       contents: prompt,
     });
     const text = response.text ?? "";
@@ -379,52 +379,54 @@ Continue as Career Compass AI (write only your next response, nothing else):`;
 //
 //   1. Eventbrite API — eventbrite.com/platform/api
 //      What: Real event listings, free tier available (1,000 req/day).
-//      Zambia coverage: moderate; strongest for international/African events.
+//      South Africa coverage: strong — Eventbrite is widely used in SA.
 //      Secret to add: EVENTBRITE_API_KEY
 //      Endpoint: GET https://www.eventbriteapi.com/v3/events/search/
-//        ?location.address=Lusaka,Zambia&q={query}&token={key}
-//      Integration: Call before Gemini, merge results, deduplicate by title.
+//        ?location.address=Johannesburg,South+Africa&q={query}&token={key}
 //
 //   2. Serper.dev — serper.dev
 //      What: Google Search API wrapper (fast, 2,500 free searches/month).
-//      Advantage: Broader coverage than grounding alone; can target specific
-//      Zambian sites (e.g. site:znbc.co.zm OR site:lusakatimes.com events).
+//      Advantage: Broader coverage; can target SA sites
+//        (e.g. site:bizcommunity.com OR site:careers24.com events).
 //      Secret to add: SERPER_API_KEY
 //      Endpoint: POST https://google.serper.dev/search
-//        { q: "networking events Zambia", gl: "zm", hl: "en", num: 10 }
+//        { q: "networking events South Africa", gl: "za", hl: "en", num: 10 }
 //
 //   3. Tavily — tavily.com
 //      What: AI-powered web search designed for LLM pipelines (1,000 free/month).
-//      Advantage: Returns clean, structured excerpts — ideal for JSON extraction.
 //      Secret to add: TAVILY_API_KEY
 //      Endpoint: POST https://api.tavily.com/search
-//        { query: "...", search_depth: "advanced", include_domains: ["eventbrite.com","meetup.com","facebook.com"] }
+//        { query: "...", search_depth: "advanced", include_domains: ["eventbrite.com","meetup.com","bizcommunity.com"] }
 //
 //   4. Meetup.com API — meetup.com/api/guide
 //      What: Networking meetups specifically. Free read-only tier.
-//      Secret to add: MEETUP_API_KEY (OAuth 2.0 or API key from meetup.com)
+//      Secret to add: MEETUP_API_KEY
 //      Endpoint: GET https://api.meetup.com/find/upcoming_events
-//        ?lat=-15.4166&lon=28.2833&radius=100&text={query}
-//      Note: Zambia coverage is limited but growing, especially tech/startup.
+//        ?lat=-26.2041&lon=28.0473&radius=100&text={query}
+//        (Johannesburg coordinates; adjust per city)
 //
 //   5. Google Custom Search API — developers.google.com/custom-search
 //      What: Programmable Google Search; 100 free queries/day, then $5/1000.
 //      Secret to add: GOOGLE_SEARCH_API_KEY + GOOGLE_CSE_ID
 //      Endpoint: GET https://www.googleapis.com/customsearch/v1
-//        ?key={key}&cx={cse_id}&q=networking+events+Zambia+2025
+//        ?key={key}&cx={cse_id}&q=networking+events+South+Africa+2025
 //
-// ZAMBIA-SPECIFIC SOURCES (no API — use Gemini/Serper to scrape):
-//   • Lusaka Times          — lusakatimes.com (events section)
-//   • Zambia Daily Mail     — daily-mail.co.zm
-//   • ZNBC                  — znbc.co.zm
-//   • Zambia Chamber of Commerce (ZACCI) — zacci.co.zm
-//   • Zambia Development Agency (ZDA)    — zda.org.zm
-//   • PACRA (business)                  — pacra.org.zm
-//   • Bongohive (tech hub)              — bongohive.co.zm
-//   • Impact Hub Lusaka                 — impacthub.net/place/lusaka
-//   • University of Zambia career portal — unza.zm
-//   • Copperbelt University events       — cbu.edu.zm
-//   • SMEE Zambia                        — smee.org.zm
+// SOUTH AFRICA-SPECIFIC SOURCES (no API — use Gemini/Serper to scrape):
+//   • Bizcommunity           — bizcommunity.com (events section)
+//   • Careers24 events       — careers24.com
+//   • CareerJunction         — careerjunction.co.za
+//   • Innovation Hub         — theinnovationhub.com (Pretoria)
+//   • Silicon Cape           — siliconcape.com (Cape Town tech)
+//   • Bandwidth Barn         — bandwidthbarn.com (Cape Town)
+//   • LaunchLab Stellenbosch — launchlab.co.za
+//   • SAICA events           — saica.co.za
+//   • ECSA events            — ecsa.co.za
+//   • IITPSA events          — iitpsa.org.za
+//   • UCT career portal      — uct.ac.za
+//   • Wits career portal     — wits.ac.za
+//   • UP career portal       — up.ac.za
+//   • AfricaCom              — africa.comworldseries.com
+//   • AfricArena             — africarena.com
 // ─────────────────────────────────────────────────────────────────────────────
 
 router.post("/ai/networking-events", async (req, res) => {
@@ -436,19 +438,16 @@ router.post("/ai/networking-events", async (req, res) => {
   const { city, degree, preferredIndustries, goals } = parsed.data;
   const today = new Date().toISOString().split("T")[0];
 
-  // Build a rich profile context so the search is personalised but not rigid.
-  // We use "relevant to" framing — not "only about" — so users see broad opportunities.
   const profileContext = [
     degree && `Field of study / degree: ${degree}`,
     preferredIndustries && `Industries of interest: ${preferredIndustries}`,
     goals && `Career goals: ${goals}`,
   ].filter(Boolean).join("\n");
 
-  const locationContext = city
-    ? `Primary location: ${city}, Zambia. Also include notable events elsewhere in Zambia and relevant international/African events that a Zambian student could attend or join online.`
-    : `Primary location: Zambia (Lusaka, Ndola, Kitwe, Livingstone, and other cities). Also include relevant international events accessible online.`;
+  const locationContext = city && city.toLowerCase() !== "south africa"
+    ? `Primary location: ${city}, South Africa. Also include events elsewhere in South Africa and relevant African or international events the student could attend or join online.`
+    : `Primary location: South Africa (Johannesburg, Cape Town, Durban, Pretoria, Port Elizabeth/Gqeberha, Bloemfontein, East London, and other cities). Also include relevant international events accessible online.`;
 
-  // Full list of event types the model may use — keeps output diverse.
   const eventTypes = [
     "career-expo (Career Expos & Job Fairs)",
     "conference (Conferences & Summits)",
@@ -472,18 +471,18 @@ router.post("/ai/networking-events", async (req, res) => {
     "other (Any opportunity not listed above)",
   ].join("\n");
 
-  const prompt = `Today is ${today}. You are a career opportunities assistant helping a Zambian student find REAL, upcoming networking and professional development opportunities.
+  const prompt = `Today is ${today}. You are a career opportunities assistant helping a South African student find REAL, upcoming networking and professional development opportunities.
 
 Student profile:
-${profileContext || "General student seeking internship/graduate opportunities in Zambia"}
+${profileContext || "General student seeking WIL placement or graduate opportunities in South Africa"}
 ${locationContext}
 
 IMPORTANT INSTRUCTIONS:
 - Search the internet RIGHT NOW for real events and opportunities.
-- Prioritise Zambia (Lusaka, Ndola, Kitwe, Livingstone, Copperbelt, etc.) but include any African or international events that are valuable.
+- Prioritise South Africa (Johannesburg, Cape Town, Durban, Pretoria, Port Elizabeth/Gqeberha, Bloemfontein, East London, Stellenbosch, etc.) but include any African or international events that are valuable.
 - Cast a WIDE net — do not limit results to only what matches the student's exact degree. Many career paths cross industries, and students benefit from diverse exposure.
-- Search across: Facebook Events, LinkedIn Events, Eventbrite Zambia, Meetup.com, BongoHive (bongohive.co.zm), Impact Hub Lusaka, Zambia Chamber of Commerce (ZACCI), ZDA, university career portals (UNZA, CBU, Mulungushi), Lusaka Times events, company career pages, and any other relevant Zambian or African platform.
-- Include opportunities the student may not have thought to look for: hackathons, alumni events, webinars, startup pitch competitions, professional association meetings, mentorship programmes, open days, awards dinners, trade fairs, volunteer/community events, training courses, and more.
+- Search across: Facebook Events SA, LinkedIn Events, Eventbrite South Africa, Meetup.com, Bizcommunity (bizcommunity.com), Innovation Hub Pretoria, Silicon Cape, CareerJunction, SAICA (saica.co.za), ECSA (ecsa.co.za), IITPSA (iitpsa.org.za), university career portals (UCT, Wits, UP, Stellenbosch, UJ, DUT, CPUT, TUT, UKZN), AfricArena, AfricaCom, company career pages, and any other relevant South African or African platform.
+- Include opportunities the student may not have thought to look for: hackathons, alumni events, webinars, startup pitch competitions, professional association meetings, mentorship programmes, open days, awards dinners, trade fairs, volunteer/community events, training courses, bursary info sessions, and more.
 - For online/virtual events, mark isOnline as true.
 
 Return ONLY a valid JSON array (no markdown, no code fences, no explanation). Each object must have exactly these fields:
