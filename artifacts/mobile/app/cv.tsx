@@ -128,7 +128,7 @@ export default function CVStudioScreen() {
           mode,
           targetIndustry: draft.targetIndustry,
           targetRole: draft.targetRole,
-          draft: sourceDraft.trim() || draft.content,
+          draft: mode === 'generate' ? sourceDraft.trim() : (sourceDraft.trim() || draft.content),
           profile: {
             displayName: profile?.displayName,
             currentDegree: profile?.currentDegree,
