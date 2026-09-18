@@ -1,0 +1,1 @@
+- [GitHub push path](github-push-path.md) — this checkout’s shell Git remote lacks credentials; use the authorized GitHub connection for repository writes.
