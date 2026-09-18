@@ -381,6 +381,24 @@ export default function ProfileScreen() {
         <Feather name="chevron-right" size={16} color={colors.primary} />
       </Pressable>
 
+      <Pressable
+        style={({ pressed }) => [s.aiBanner, { marginTop: -4 }, pressed && { opacity: 0.82 }]}
+        onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); router.push('/cv'); }}
+        android_ripple={{ color: 'rgba(99,102,241,0.2)' }}
+        accessibilityLabel="Open CV Studio"
+      >
+        <View style={s.aiBannerLeft}>
+          <View style={s.aiIconWrap}>
+            <Feather name="file-text" size={16} color="#fff" />
+          </View>
+          <View>
+            <Text style={s.aiBannerTitle}>Build your CV</Text>
+            <Text style={s.aiBannerSub}>Generate, polish, and tailor a CV for each industry</Text>
+          </View>
+        </View>
+        <Feather name="chevron-right" size={16} color={colors.primary} />
+      </Pressable>
+
       {/* ── Profile details card (view mode) ── */}
       {!isEditing && (
         <View style={s.card}>

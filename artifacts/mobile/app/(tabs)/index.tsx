@@ -413,6 +413,22 @@ export default function DashboardScreen() {
           </Text>
         </Pressable>
       </View>
+      <Pressable
+        style={({ pressed }) => [s.cvAction, pressed && { opacity: 0.85 }]}
+        onPress={() => router.push('/cv')}
+        accessibilityRole="button"
+        accessibilityLabel="Open CV Studio"
+        android_ripple={{ color: colors.indigoBg }}
+      >
+        <View style={[s.cvActionIcon, { backgroundColor: colors.indigoBg, borderColor: colors.indigoBorder }]}>
+          <Feather name="file-text" size={20} color={colors.primary} />
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={s.cvActionTitle}>Build or tailor your CV</Text>
+          <Text style={s.cvActionSub}>Create a role-specific CV from your profile or polish one you already have.</Text>
+        </View>
+        <Feather name="chevron-right" size={18} color={colors.primary} />
+      </Pressable>
     </ScrollView>
   );
 }
@@ -479,6 +495,10 @@ const styles = (colors: ReturnType<typeof useColors>) => StyleSheet.create({
   quickIconBg: { width: 48, height: 48, borderRadius: 14, alignItems: 'center', justifyContent: 'center', borderWidth: 1 },
   quickTitle: { fontSize: 15, fontFamily: 'Inter_700Bold', color: colors.text, lineHeight: 22 },
   quickSub: { fontSize: 12, fontFamily: 'Inter_400Regular', color: colors.textSecondary },
+  cvAction: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 14, marginTop: 10, backgroundColor: colors.card, borderRadius: 16, borderWidth: 1, borderColor: colors.indigoBorder },
+  cvActionIcon: { width: 42, height: 42, borderRadius: 12, alignItems: 'center', justifyContent: 'center', borderWidth: 1 },
+  cvActionTitle: { fontSize: 14, fontFamily: 'Inter_700Bold', color: colors.text, marginBottom: 3 },
+  cvActionSub: { fontSize: 11, lineHeight: 16, fontFamily: 'Inter_400Regular', color: colors.textSecondary },
   savedEventCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.card, borderRadius: 14, padding: 14, marginBottom: 8, borderWidth: 1, borderColor: colors.border, gap: 10 },
   savedEventLeft: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 12 },
   savedEventTypeDot: { width: 8, height: 8, borderRadius: 4, flexShrink: 0 },

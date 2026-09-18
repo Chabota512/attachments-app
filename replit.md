@@ -27,6 +27,7 @@ A mobile app helping Zambian students find WIL (Work-Integrated Learning) placem
 - `artifacts/mobile/app/(tabs)/` — Tab screens: Dashboard, Jobs, Companies, Network, Profile
 - `artifacts/mobile/app/(tabs)/contacts.tsx` — Network tab: live event feed + contacts manager
 - `artifacts/mobile/app/(tabs)/index.tsx` — Dashboard with saved events section
+- `artifacts/mobile/app/cv.tsx` — CV Studio: generate, polish, tailor, save, and share CV versions
 - `artifacts/mobile/context/AppContext.tsx` — Global state: profile, contacts, saved events
 - `artifacts/mobile/constants/colors.ts` — Design tokens (dark theme, primary indigo #6366f1)
 - `artifacts/api-server/src/routes/ai.ts` — All AI routes incl. `/ai/networking-events`
@@ -48,6 +49,7 @@ A mobile app helping Zambian students find WIL (Work-Integrated Learning) placem
 - **Companies**: Browse companies offering graduate/internship programmes.
 - **Network tab**: Live feed of 8–15 real upcoming networking events (scraped from the internet on demand via Gemini + Google Search). 20 filter categories, sort options, bookmark to Dashboard. Contacts manager accessible via top-right icon.
 - **Profile**: View and edit user profile.
+- **CV Studio**: Generate a CV from the profile, paste an existing CV to polish it, tailor versions to an industry and role, and save/share versions offline.
 
 ## User preferences
 

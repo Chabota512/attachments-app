@@ -7,6 +7,7 @@ import {
   StarFeedbackBody,
   InterviewQuestionsBody,
   ProfileChatBody,
+  CVBody,
   FindNetworkingEventsBody,
 } from "@workspace/api-zod";
 
@@ -466,6 +467,78 @@ Continue as Career Compass AI (write only your next response, nothing else):`;
   } catch (err) {
     req.log.error({ err }, "profile-chat failed");
     res.status(500).json({ error: "Failed to get AI response" });
+  }
+});
+
+router.post("/ai/cv", async (req, res) => {
+  const parsed = CVBody.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: "Invalid request body" });
+    return;
+  }
+
+  const { mode, targetIndustry, targetRole, draft, profile } = parsed.data;
+  const profileLines = [
+    profile?.displayName && `Name: ${profile.displayName}`,
+    profile?.currentDegree && `Current degree: ${profile.currentDegree}`,
+    profile?.institution && `Institution: ${profile.institution}`,
+    profile?.yearOfStudy && `Year of study: ${profile.yearOfStudy}`,
+    profile?.skills && `Skills: ${profile.skills}`,
+    profile?.city && `City: ${profile.city}`,
+    profile?.careerGoals && `Career goals: ${profile.careerGoals}`,
+    profile?.portfolioUrl && `Portfolio or GitHub: ${profile.portfolioUrl}`,
+    profile?.profileFields?.length
+      ? `Additional profile details:\n${profile.profileFields.map(field => `- ${field.label}: ${field.value}`).join("\n")}`
+      : "",
+  ].filter(Boolean).join("\n");
+
+  const task = mode === "generate"
+    ? "Create a complete, professional entry-level CV from the candidate profile and draft notes."
+    : "Polish and rewrite the existing CV while preserving the candidate's real facts and voice.";
+
+  const prompt = `You are an expert CV writer and career coach for students and early-career professionals in Southern Africa.
+
+${task}
+
+TARGET INDUSTRY: ${targetIndustry || "General professional roles"}
+TARGET ROLE: ${targetRole || "A suitable graduate or entry-level role"}
+
+CANDIDATE PROFILE:
+${profileLines || "No structured profile was provided."}
+
+SOURCE CV OR NOTES:
+${draft || "No source draft was provided. Use the candidate profile only."}
+
+Rules:
+- Never invent employers, dates, qualifications, awards, skills, metrics, links, or achievements.
+- Keep the candidate's actual experience, but improve clarity, grammar, hierarchy, and action-oriented wording.
+- Tailor the summary, skills emphasis, and bullet wording to the target industry and role.
+- If a detail is missing, omit it rather than adding a placeholder that looks like a fact.
+- Use British English spelling and professional Southern African conventions.
+- Make it concise enough for a strong one- to two-page CV.
+- Use plain text only. Use these uppercase section headings where relevant: PROFESSIONAL SUMMARY, EDUCATION, EXPERIENCE, PROJECTS & ACHIEVEMENTS, SKILLS, CERTIFICATIONS, LANGUAGES, REFERENCES.
+- Use a bullet character (•) for achievement bullets.
+- Start with the candidate's name when it is known. Do not add a cover letter, explanation, markdown fences, or commentary.
+
+Return only the finished CV text.`;
+
+  try {
+    const response = await ai.models.generateContent({
+      model: "gemini-2.5-flash",
+      contents: prompt,
+    });
+    const cv = (response.text ?? "")
+      .replace(/^```(?:text|markdown)?\s*/i, "")
+      .replace(/\s*```$/i, "")
+      .trim();
+    if (!cv) {
+      res.status(500).json({ error: "AI returned an empty CV" });
+      return;
+    }
+    res.json({ cv });
+  } catch (err) {
+    req.log.error({ err }, "cv generation failed");
+    res.status(500).json({ error: "Failed to build CV" });
   }
 });
 

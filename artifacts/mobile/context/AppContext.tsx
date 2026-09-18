@@ -66,11 +66,22 @@ export interface SavedEvent {
   savedAt: string;
 }
 
+export interface CVDocument {
+  id: string;
+  title: string;
+  targetIndustry: string;
+  targetRole: string;
+  content: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 interface AppContextType {
   profile: UserProfile | null;
   applications: Application[];
   contacts: Contact[];
   savedEvents: SavedEvent[];
+  cvDocuments: CVDocument[];
   isLoaded: boolean;
   updateProfile: (p: UserProfile) => Promise<void>;
   addApplication: (data: Omit<Application, 'id' | 'lastModified'>) => Promise<Application>;
@@ -81,6 +92,8 @@ interface AppContextType {
   deleteContact: (id: string) => Promise<void>;
   saveEvent: (event: Omit<SavedEvent, 'savedAt'>) => Promise<void>;
   unsaveEvent: (id: string) => Promise<void>;
+  saveCVDocument: (document: Omit<CVDocument, 'id' | 'createdAt' | 'updatedAt'> & { id?: string }) => Promise<CVDocument>;
+  deleteCVDocument: (id: string) => Promise<void>;
 }
 
 const AppContext = createContext<AppContextType | null>(null);
@@ -89,6 +102,7 @@ const PROFILE_KEY = 'cc_profile';
 const APPS_KEY = 'cc_applications';
 const CONTACTS_KEY = 'cc_contacts';
 const SAVED_EVENTS_KEY = 'cc_saved_events';
+const CV_DOCUMENTS_KEY = 'cc_cv_documents';
 
 export function genId() {
   return Date.now().toString() + Math.random().toString(36).substr(2, 9);
@@ -103,16 +117,18 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [applications, setApplications] = useState<Application[]>([]);
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [savedEvents, setSavedEvents] = useState<SavedEvent[]>([]);
+  const [cvDocuments, setCVDocuments] = useState<CVDocument[]>([]);
   const [isLoaded, setIsLoaded] = useState(false);
 
   useEffect(() => {
     (async () => {
       try {
-        const [rawProfile, rawApps, rawContacts, rawEvents] = await Promise.all([
+        const [rawProfile, rawApps, rawContacts, rawEvents, rawCVs] = await Promise.all([
           AsyncStorage.getItem(PROFILE_KEY),
           AsyncStorage.getItem(APPS_KEY),
           AsyncStorage.getItem(CONTACTS_KEY),
           AsyncStorage.getItem(SAVED_EVENTS_KEY),
+          AsyncStorage.getItem(CV_DOCUMENTS_KEY),
         ]);
         let p: UserProfile = rawProfile ? JSON.parse(rawProfile) : defaultProfile();
         if (!rawProfile) await AsyncStorage.setItem(PROFILE_KEY, JSON.stringify(p));
@@ -120,6 +136,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         setApplications(rawApps ? JSON.parse(rawApps) : []);
         setContacts(rawContacts ? JSON.parse(rawContacts) : []);
         setSavedEvents(rawEvents ? JSON.parse(rawEvents) : []);
+        setCVDocuments(rawCVs ? JSON.parse(rawCVs) : []);
       } finally {
         setIsLoaded(true);
       }
@@ -212,13 +229,42 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     });
   }, []);
 
+  const saveCVDocument = useCallback(async (
+    data: Omit<CVDocument, 'id' | 'createdAt' | 'updatedAt'> & { id?: string },
+  ) => {
+    const now = new Date().toISOString();
+    const existing = data.id ? cvDocuments.find(document => document.id === data.id) : undefined;
+    const savedDocument: CVDocument = {
+      ...data,
+      id: existing?.id ?? data.id ?? genId(),
+      createdAt: existing?.createdAt ?? now,
+      updatedAt: now,
+    };
+
+    const next = existing
+      ? cvDocuments.map(document => document.id === existing.id ? savedDocument : document)
+      : [savedDocument, ...cvDocuments];
+    setCVDocuments(next);
+    await AsyncStorage.setItem(CV_DOCUMENTS_KEY, JSON.stringify(next));
+    return savedDocument;
+  }, [cvDocuments]);
+
+  const deleteCVDocument = useCallback(async (id: string) => {
+    setCVDocuments(prev => {
+      const next = prev.filter(document => document.id !== id);
+      AsyncStorage.setItem(CV_DOCUMENTS_KEY, JSON.stringify(next));
+      return next;
+    });
+  }, []);
+
   return (
     <AppContext.Provider value={{
-      profile, applications, contacts, savedEvents, isLoaded,
+      profile, applications, contacts, savedEvents, cvDocuments, isLoaded,
       updateProfile,
       addApplication, updateApplication, deleteApplication,
       addContact, updateContact, deleteContact,
       saveEvent, unsaveEvent,
+      saveCVDocument, deleteCVDocument,
     }}>
       {children}
     </AppContext.Provider>

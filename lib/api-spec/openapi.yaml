@@ -124,6 +124,25 @@ paths:
               schema:
                 $ref: "#/components/schemas/ProfileChatResult"
 
+  /ai/cv:
+    post:
+      operationId: buildCV
+      tags: [ai]
+      summary: Generate, polish, or tailor a CV using AI
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CVInput"
+      responses:
+        "200":
+          description: Generated CV text
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CVResult"
+
   /ai/networking-events:
     post:
       operationId: findNetworkingEvents
@@ -244,6 +263,58 @@ components:
           type: boolean
         profileData:
           $ref: "#/components/schemas/ExtractedProfile"
+
+    CVProfile:
+      type: object
+      properties:
+        displayName:
+          type: string
+        currentDegree:
+          type: string
+        institution:
+          type: string
+        yearOfStudy:
+          type: string
+        skills:
+          type: string
+        city:
+          type: string
+        careerGoals:
+          type: string
+        portfolioUrl:
+          type: string
+        profileFields:
+          type: array
+          items:
+            $ref: "#/components/schemas/ProfileField"
+
+    CVInput:
+      type: object
+      required:
+        - mode
+        - targetIndustry
+        - targetRole
+        - draft
+      properties:
+        mode:
+          type: string
+          enum: [generate, polish]
+        targetIndustry:
+          type: string
+        targetRole:
+          type: string
+        draft:
+          type: string
+        profile:
+          $ref: "#/components/schemas/CVProfile"
+
+    CVResult:
+      type: object
+      required:
+        - cv
+      properties:
+        cv:
+          type: string
 
     DiscoverCompaniesInput:
       type: object

@@ -124,6 +124,40 @@ export const ProfileChatResponse = zod.object({
 });
 
 /**
+ * @summary Generate, polish, or tailor a CV using AI
+ */
+export const CVBody = zod.object({
+  mode: zod.enum(["generate", "polish"]),
+  targetIndustry: zod.string(),
+  targetRole: zod.string(),
+  draft: zod.string(),
+  profile: zod
+    .object({
+      displayName: zod.string().optional(),
+      currentDegree: zod.string().optional(),
+      institution: zod.string().optional(),
+      yearOfStudy: zod.string().optional(),
+      skills: zod.string().optional(),
+      city: zod.string().optional(),
+      careerGoals: zod.string().optional(),
+      portfolioUrl: zod.string().optional(),
+      profileFields: zod
+        .array(
+          zod.object({
+            label: zod.string(),
+            value: zod.string(),
+          }),
+        )
+        .optional(),
+    })
+    .optional(),
+});
+
+export const CVResponse = zod.object({
+  cv: zod.string(),
+});
+
+/**
  * @summary Find real networking events from the internet
  */
 export const FindNetworkingEventsBody = zod.object({
