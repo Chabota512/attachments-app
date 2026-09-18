@@ -7,6 +7,7 @@ import {
   Platform,
   Pressable,
   StyleSheet,
+  Switch,
   Text,
   TextInput,
   View,
@@ -15,6 +16,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 
 import { genId, ProfileField, useApp } from '@/context/AppContext';
+import { useTheme } from '@/context/ThemeContext';
 import { useColors } from '@/hooks/useColors';
 
 function getFieldValue(fields: ProfileField[], ...keywords: string[]): string | undefined {
@@ -168,6 +170,7 @@ export default function ProfileScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { profile, updateProfile, applications, contacts } = useApp();
+  const { theme, setTheme } = useTheme();
 
   const [isEditing, setIsEditing] = useState(false);
   const [editFields, setEditFields] = useState<ProfileField[]>([]);
@@ -446,6 +449,31 @@ export default function ProfileScreen() {
         </View>
       )}
 
+      <View style={[s.card, s.appearanceRow]}>
+        <View style={s.appearanceLeft}>
+          <View style={s.appearanceIcon}>
+            <Feather name={theme === 'dark' ? 'moon' : 'sun'} size={16} color={colors.primary} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={s.appearanceTitle}>Appearance</Text>
+            <Text style={s.appearanceSub}>
+              {theme === 'dark' ? 'Dark mode is on' : 'Light mode is on'}
+            </Text>
+          </View>
+        </View>
+        <Switch
+          value={theme === 'light'}
+          onValueChange={value => {
+            Haptics.selectionAsync();
+            void setTheme(value ? 'light' : 'dark');
+          }}
+          trackColor={{ false: colors.mutedStrong, true: colors.indigoBg }}
+          thumbColor={theme === 'light' ? colors.primary : colors.textMuted}
+          ios_backgroundColor={colors.mutedStrong}
+          accessibilityLabel="Toggle light mode"
+        />
+      </View>
+
       {/* ── Edit form ── */}
       {isEditing && (
         <View style={s.editForm}>
@@ -643,6 +671,23 @@ const styles = (colors: ReturnType<typeof useColors>) => StyleSheet.create({
     paddingHorizontal: 16, paddingVertical: 14,
     marginBottom: 10,
   },
+  appearanceRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 14,
+  },
+  appearanceLeft: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 12 },
+  appearanceIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    backgroundColor: colors.indigoBg,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  appearanceTitle: { fontSize: 14, fontFamily: 'Inter_600SemiBold', color: colors.text },
+  appearanceSub: { fontSize: 12, fontFamily: 'Inter_400Regular', color: colors.textMuted, marginTop: 2 },
   cardHeader: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     marginBottom: 10,

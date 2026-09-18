@@ -1,4 +1,4 @@
-const palette = {
+const darkPalette = {
   background: '#0a0a1e',
   card: '#12123a',
   cardElevated: '#1a1a50',
@@ -39,9 +39,50 @@ const palette = {
   divider: 'rgba(255,255,255,0.07)',
 };
 
+const lightPalette = {
+  background: '#f8f8fc',
+  card: '#ffffff',
+  cardElevated: '#f0efff',
+  border: 'rgba(20,22,60,0.12)',
+  borderStrong: 'rgba(20,22,60,0.20)',
+  primary: '#4f46e5',
+  primaryDark: '#3730a3',
+  primaryLight: '#6366f1',
+  primaryFg: '#ffffff',
+  text: '#15162b',
+  textSecondary: '#454766',
+  textMuted: '#70738e',
+  tint: '#4f46e5',
+  muted: 'rgba(20,22,60,0.06)',
+  mutedStrong: 'rgba(20,22,60,0.10)',
+  destructive: '#dc2626',
+  destructiveFg: '#ffffff',
+  success: '#059669',
+  successBg: 'rgba(5,150,105,0.10)',
+  successBorder: 'rgba(5,150,105,0.22)',
+  warning: '#d97706',
+  warningBg: 'rgba(217,119,6,0.11)',
+  warningBorder: 'rgba(217,119,6,0.24)',
+  danger: '#dc2626',
+  dangerBg: 'rgba(220,38,38,0.10)',
+  dangerBorder: 'rgba(220,38,38,0.22)',
+  blue: '#2563eb',
+  blueBg: 'rgba(37,99,235,0.10)',
+  blueBorder: 'rgba(37,99,235,0.22)',
+  purple: '#9333ea',
+  purpleBg: 'rgba(147,51,234,0.10)',
+  purpleBorder: 'rgba(147,51,234,0.22)',
+  indigo: '#4f46e5',
+  indigoBg: 'rgba(79,70,229,0.10)',
+  indigoBorder: 'rgba(79,70,229,0.22)',
+  amber: '#d97706',
+  amberBg: 'rgba(217,119,6,0.10)',
+  divider: 'rgba(20,22,60,0.08)',
+};
+
 const colors = {
-  light: palette,
-  dark: palette,
+  light: lightPalette,
+  dark: darkPalette,
   radius: 20,
 };
 
