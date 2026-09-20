@@ -171,7 +171,7 @@ export default function NetworkScreen() {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            city: profile?.city || 'South Africa',
+            city: profile?.city || 'Lusaka, Zambia',
             degree: profile?.currentDegree || '',
             preferredIndustries: profile?.preferredIndustries || '',
             goals: profile?.careerGoals || '',
@@ -629,7 +629,7 @@ export default function NetworkScreen() {
             <Text style={s.fieldLabel}>Name</Text>
             <TextInput value={contactForm.name} onChangeText={v => setContactForm(f => ({ ...f, name: v }))} placeholder="e.g. Thabo Dlamini" placeholderTextColor={colors.textMuted} style={s.field} autoFocus accessibilityLabel="Contact name" />
             <Text style={s.fieldLabel}>Company</Text>
-            <TextInput value={contactForm.company} onChangeText={v => setContactForm(f => ({ ...f, company: v }))} placeholder="e.g. Deloitte South Africa" placeholderTextColor={colors.textMuted} style={s.field} accessibilityLabel="Contact company" />
+            <TextInput value={contactForm.company} onChangeText={v => setContactForm(f => ({ ...f, company: v }))} placeholder="e.g. Zambian employer" placeholderTextColor={colors.textMuted} style={s.field} accessibilityLabel="Contact company" />
             <Text style={s.fieldLabel}>How We Met</Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 20 }} contentContainerStyle={{ gap: 8 }}>
               {HOW_MET_OPTIONS.map(opt => (
