@@ -1,1 +1,2 @@
 - [GitHub push path](github-push-path.md) — this checkout’s shell Git remote lacks credentials; use the authorized GitHub connection for repository writes.
+- [Dependency firewall](dependency-firewall.md) — locked transitive package versions can be blocked; install from manifests when the lockfile cannot resolve.
