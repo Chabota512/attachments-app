@@ -6,4 +6,21 @@
  * OpenAPI spec version: 0.1.0
  */
 
+export * from "./chatMessage";
+export * from "./companyDiscovery";
+export * from "./discoverCompaniesInput";
+export * from "./draftLetterInput";
+export * from "./draftLetterResult";
+export * from "./extractedProfile";
 export * from "./healthStatus";
+export * from "./interviewQuestionsInput";
+export * from "./interviewQuestionsResult";
+export * from "./networkingEvent";
+export * from "./networkingEventsInput";
+export * from "./profileChatInput";
+export * from "./profileChatResult";
+export * from "./profileField";
+export * from "./researchCompanyInput";
+export * from "./researchCompanyResult";
+export * from "./starFeedbackInput";
+export * from "./starFeedbackResult";

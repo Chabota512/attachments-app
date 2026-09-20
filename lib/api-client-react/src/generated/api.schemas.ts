@@ -8,3 +8,131 @@
 export interface HealthStatus {
   status: string;
 }
+
+export interface ChatMessage {
+  role: string;
+  content: string;
+}
+
+export interface ProfileChatInput {
+  messages: ChatMessage[];
+}
+
+export interface ProfileField {
+  label: string;
+  value: string;
+}
+
+export interface ExtractedProfile {
+  displayName?: string;
+  currentDegree?: string;
+  institution?: string;
+  yearOfStudy?: string;
+  skills?: string;
+  city?: string;
+  preferredIndustries?: string;
+  careerGoals?: string;
+  portfolioUrl?: string;
+  profileFields?: ProfileField[];
+}
+
+export interface ProfileChatResult {
+  reply: string;
+  isComplete: boolean;
+  profileData?: ExtractedProfile;
+}
+
+export interface DiscoverCompaniesInput {
+  latitude: number;
+  longitude: number;
+  degree: string;
+  institution?: string;
+  yearOfStudy?: string;
+  skills?: string;
+  city?: string;
+  preferredIndustries?: string;
+  goals?: string;
+}
+
+export interface CompanyDiscovery {
+  name: string;
+  description: string;
+  fitScore: string;
+  /** @nullable */
+  website?: string | null;
+}
+
+export interface DraftLetterInput {
+  companyName: string;
+  role: string;
+  degree: string;
+  goals: string;
+  institution?: string;
+  yearOfStudy?: string;
+  skills?: string;
+  portfolioUrl?: string;
+  userDraft?: string;
+}
+
+export interface DraftLetterResult {
+  letter: string;
+}
+
+export interface ResearchCompanyInput {
+  companyName: string;
+}
+
+export interface ResearchCompanyResult {
+  summary: string;
+}
+
+export interface StarFeedbackInput {
+  question: string;
+  situation: string;
+  task: string;
+  action: string;
+  result: string;
+}
+
+export interface StarFeedbackResult {
+  feedback: string;
+}
+
+export interface InterviewQuestionsInput {
+  companyName: string;
+  role: string;
+  degree: string;
+  goals: string;
+  institution?: string;
+  yearOfStudy?: string;
+  skills?: string;
+  researchSummary?: string;
+}
+
+export interface NetworkingEventsInput {
+  city: string;
+  degree?: string;
+  preferredIndustries?: string;
+  goals?: string;
+}
+
+export interface NetworkingEvent {
+  id: string;
+  title: string;
+  eventType: string;
+  organizer: string;
+  dateLabel: string;
+  dateIso?: string;
+  location: string;
+  description?: string;
+  url?: string;
+  source?: string;
+  tags?: string[];
+  isOnline?: boolean;
+}
+
+export interface InterviewQuestionsResult {
+  personal: string[];
+  company: string[];
+  experience: string[];
+}
