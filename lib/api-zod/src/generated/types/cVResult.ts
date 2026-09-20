@@ -6,7 +6,6 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export interface ChatMessage {
-  role: string;
-  content: string;
+export interface CVResult {
+  cv: string;
 }

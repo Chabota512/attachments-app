@@ -5,8 +5,8 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
+import type { SyncMutation } from './syncMutation';
 
-export interface ChatMessage {
-  role: string;
-  content: string;
+export interface SyncPushInput {
+  mutations: SyncMutation[];
 }

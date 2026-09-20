@@ -12,6 +12,10 @@ tags:
     description: Health operations
   - name: ai
     description: AI-powered features
+  - name: auth
+    description: Supabase-backed authentication
+  - name: sync
+    description: Offline-first cloud synchronization
 paths:
   /healthz:
     get:
@@ -183,7 +187,137 @@ paths:
               schema:
                 $ref: "#/components/schemas/InterviewQuestionsResult"
 
+  /auth/signup:
+    post:
+      operationId: signUp
+      tags: [auth]
+      summary: Create a Supabase account
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AuthCredentials"
+      responses:
+        "200":
+          description: Created account and optional session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+
+  /auth/login:
+    post:
+      operationId: login
+      tags: [auth]
+      summary: Sign in with email and password
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AuthCredentials"
+      responses:
+        "200":
+          description: Authenticated session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+
+  /auth/refresh:
+    post:
+      operationId: refreshSession
+      tags: [auth]
+      summary: Refresh a Supabase session
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RefreshSessionInput"
+      responses:
+        "200":
+          description: Refreshed session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+
+  /auth/logout:
+    post:
+      operationId: logout
+      tags: [auth]
+      security:
+        - bearerAuth: []
+      summary: Sign out the current session
+      responses:
+        "204":
+          description: Signed out
+
+  /auth/me:
+    get:
+      operationId: getCurrentUser
+      tags: [auth]
+      security:
+        - bearerAuth: []
+      summary: Get the current authenticated user
+      responses:
+        "200":
+          description: Current user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthUser"
+
+  /sync/pull:
+    post:
+      operationId: pullSync
+      tags: [sync]
+      security:
+        - bearerAuth: []
+      summary: Pull cloud records changed since a cursor
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SyncPullInput"
+      responses:
+        "200":
+          description: Changed records and the next sync cursor
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SyncPullResult"
+
+  /sync/push:
+    post:
+      operationId: pushSync
+      tags: [sync]
+      security:
+        - bearerAuth: []
+      summary: Apply queued offline mutations
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SyncPushInput"
+      responses:
+        "200":
+          description: Applied mutations and conflicts
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SyncPushResult"
+
 components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
   schemas:
     HealthStatus:
       type: object
@@ -532,3 +666,149 @@ components:
           type: array
           items:
             type: string
+
+    AuthCredentials:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          minLength: 8
+
+    RefreshSessionInput:
+      type: object
+      required: [refreshToken]
+      properties:
+        refreshToken:
+          type: string
+
+    AuthUser:
+      type: object
+      required: [id, email]
+      properties:
+        id:
+          type: string
+        email:
+          type: string
+          format: email
+        createdAt:
+          type: string
+        lastSignInAt:
+          type: string
+
+    AuthSession:
+      type: object
+      required: [accessToken, refreshToken, tokenType, expiresIn, user]
+      properties:
+        accessToken:
+          type: string
+        refreshToken:
+          type: string
+        tokenType:
+          type: string
+        expiresIn:
+          type: integer
+        expiresAt:
+          type: integer
+        user:
+          $ref: "#/components/schemas/AuthUser"
+
+    AuthResponse:
+      type: object
+      required: [session]
+      properties:
+        session:
+          anyOf:
+            - $ref: "#/components/schemas/AuthSession"
+            - type: "null"
+        user:
+          anyOf:
+            - $ref: "#/components/schemas/AuthUser"
+            - type: "null"
+        requiresEmailConfirmation:
+          type: boolean
+
+    SyncPullInput:
+      type: object
+      properties:
+        since:
+          type: string
+        entities:
+          type: array
+          items:
+            type: string
+
+    SyncRecord:
+      type: object
+      required: [entity, recordId, payload, updatedAt, deletedAt]
+      properties:
+        entity:
+          type: string
+        recordId:
+          type: string
+        payload:
+          type: object
+          additionalProperties: true
+        updatedAt:
+          type: string
+        deletedAt:
+          anyOf:
+            - type: string
+            - type: "null"
+
+    SyncPullResult:
+      type: object
+      required: [records, cursor]
+      properties:
+        records:
+          type: array
+          items:
+            $ref: "#/components/schemas/SyncRecord"
+        cursor:
+          type: string
+
+    SyncMutation:
+      type: object
+      required: [idempotencyKey, entity, recordId, operation, updatedAt]
+      properties:
+        idempotencyKey:
+          type: string
+        entity:
+          type: string
+        recordId:
+          type: string
+        operation:
+          type: string
+          enum: [upsert, delete]
+        payload:
+          type: object
+          additionalProperties: true
+        updatedAt:
+          type: string
+
+    SyncPushInput:
+      type: object
+      required: [mutations]
+      properties:
+        mutations:
+          type: array
+          items:
+            $ref: "#/components/schemas/SyncMutation"
+
+    SyncPushResult:
+      type: object
+      required: [applied, conflicts, cursor]
+      properties:
+        applied:
+          type: array
+          items:
+            type: string
+        conflicts:
+          type: array
+          items:
+            $ref: "#/components/schemas/SyncRecord"
+        cursor:
+          type: string

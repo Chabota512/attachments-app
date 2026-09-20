@@ -5,15 +5,16 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
+import type { ProfileField } from './profileField';
 
-export interface DraftLetterInput {
-  companyName: string;
-  role: string;
-  degree: string;
-  goals: string;
+export interface CVProfile {
+  displayName?: string;
+  currentDegree?: string;
   institution?: string;
   yearOfStudy?: string;
   skills?: string;
+  city?: string;
+  careerGoals?: string;
   portfolioUrl?: string;
-  userDraft?: string;
+  profileFields?: ProfileField[];
 }

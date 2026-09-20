@@ -6,7 +6,7 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export interface ChatMessage {
-  role: string;
-  content: string;
+export interface SyncPullInput {
+  since?: string;
+  entities?: string[];
 }

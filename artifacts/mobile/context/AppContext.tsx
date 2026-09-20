@@ -1,5 +1,13 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
+import {
+  pullSync,
+  pushSync,
+  type SyncMutation,
+  type SyncRecord,
+} from '@workspace/api-client-react';
+
+import { useAuth } from './AuthContext';
 
 export type ApplicationStatus = 'Interested' | 'Applied' | 'Interviewing' | 'Offer' | 'Rejected' | 'Accepted';
 
@@ -83,6 +91,10 @@ interface AppContextType {
   savedEvents: SavedEvent[];
   cvDocuments: CVDocument[];
   isLoaded: boolean;
+  isCloudSyncing: boolean;
+  pendingSyncCount: number;
+  syncError: string | null;
+  syncNow: () => Promise<void>;
   updateProfile: (p: UserProfile) => Promise<void>;
   addApplication: (data: Omit<Application, 'id' | 'lastModified'>) => Promise<Application>;
   updateApplication: (id: string, updates: Partial<Application>) => Promise<void>;
@@ -103,6 +115,12 @@ const APPS_KEY = 'cc_applications';
 const CONTACTS_KEY = 'cc_contacts';
 const SAVED_EVENTS_KEY = 'cc_saved_events';
 const CV_DOCUMENTS_KEY = 'cc_cv_documents';
+const SYNC_QUEUE_KEY = 'cc_sync_queue';
+const SYNC_CURSOR_KEY = 'cc_sync_cursor';
+
+type SyncQueueItem = SyncMutation & {
+  operation: 'upsert' | 'delete';
+};
 
 export function genId() {
   return Date.now().toString() + Math.random().toString(36).substr(2, 9);
@@ -113,30 +131,36 @@ function defaultProfile(): UserProfile {
 }
 
 export function AppProvider({ children }: { children: React.ReactNode }) {
+  const { isAuthenticated, user } = useAuth();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [applications, setApplications] = useState<Application[]>([]);
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [savedEvents, setSavedEvents] = useState<SavedEvent[]>([]);
   const [cvDocuments, setCVDocuments] = useState<CVDocument[]>([]);
   const [isLoaded, setIsLoaded] = useState(false);
+  const [isCloudSyncing, setIsCloudSyncing] = useState(false);
+  const [pendingSyncCount, setPendingSyncCount] = useState(0);
+  const [syncError, setSyncError] = useState<string | null>(null);
 
   useEffect(() => {
     (async () => {
       try {
-        const [rawProfile, rawApps, rawContacts, rawEvents, rawCVs] = await Promise.all([
+        const [rawProfile, rawApps, rawContacts, rawEvents, rawCVs, rawQueue] = await Promise.all([
           AsyncStorage.getItem(PROFILE_KEY),
           AsyncStorage.getItem(APPS_KEY),
           AsyncStorage.getItem(CONTACTS_KEY),
           AsyncStorage.getItem(SAVED_EVENTS_KEY),
           AsyncStorage.getItem(CV_DOCUMENTS_KEY),
+          AsyncStorage.getItem(SYNC_QUEUE_KEY),
         ]);
-        let p: UserProfile = rawProfile ? JSON.parse(rawProfile) : defaultProfile();
+        const p: UserProfile = rawProfile ? JSON.parse(rawProfile) : defaultProfile();
         if (!rawProfile) await AsyncStorage.setItem(PROFILE_KEY, JSON.stringify(p));
         setProfile(p);
         setApplications(rawApps ? JSON.parse(rawApps) : []);
         setContacts(rawContacts ? JSON.parse(rawContacts) : []);
         setSavedEvents(rawEvents ? JSON.parse(rawEvents) : []);
         setCVDocuments(rawCVs ? JSON.parse(rawCVs) : []);
+        setPendingSyncCount(rawQueue ? (JSON.parse(rawQueue) as SyncQueueItem[]).length : 0);
       } finally {
         setIsLoaded(true);
       }
@@ -153,81 +177,224 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     await AsyncStorage.setItem(CONTACTS_KEY, JSON.stringify(ctcts));
   }, []);
 
+  const mergePulledRecords = useCallback(async (records: SyncRecord[]) => {
+    let nextProfile = profile;
+    let nextApplications = applications;
+    let nextContacts = contacts;
+    let nextEvents = savedEvents;
+    let nextCVs = cvDocuments;
+
+    for (const record of records) {
+      const payload = record.payload as unknown;
+      if (record.entity === 'profile' && !record.deletedAt) {
+        nextProfile = payload as UserProfile;
+      } else if (record.entity === 'applications') {
+        const item = payload as Application;
+        nextApplications = record.deletedAt
+          ? nextApplications.filter(value => value.id !== record.recordId)
+          : [item, ...nextApplications.filter(value => value.id !== record.recordId)];
+      } else if (record.entity === 'contacts') {
+        const item = payload as Contact;
+        nextContacts = record.deletedAt
+          ? nextContacts.filter(value => value.id !== record.recordId)
+          : [item, ...nextContacts.filter(value => value.id !== record.recordId)];
+      } else if (record.entity === 'savedEvents') {
+        const item = payload as SavedEvent;
+        nextEvents = record.deletedAt
+          ? nextEvents.filter(value => value.id !== record.recordId)
+          : [item, ...nextEvents.filter(value => value.id !== record.recordId)];
+      } else if (record.entity === 'cvDocuments') {
+        const item = payload as CVDocument;
+        nextCVs = record.deletedAt
+          ? nextCVs.filter(value => value.id !== record.recordId)
+          : [item, ...nextCVs.filter(value => value.id !== record.recordId)];
+      }
+    }
+
+    setProfile(nextProfile);
+    setApplications(nextApplications);
+    setContacts(nextContacts);
+    setSavedEvents(nextEvents);
+    setCVDocuments(nextCVs);
+    await Promise.all([
+      nextProfile ? AsyncStorage.setItem(PROFILE_KEY, JSON.stringify(nextProfile)) : Promise.resolve(),
+      AsyncStorage.setItem(APPS_KEY, JSON.stringify(nextApplications)),
+      AsyncStorage.setItem(CONTACTS_KEY, JSON.stringify(nextContacts)),
+      AsyncStorage.setItem(SAVED_EVENTS_KEY, JSON.stringify(nextEvents)),
+      AsyncStorage.setItem(CV_DOCUMENTS_KEY, JSON.stringify(nextCVs)),
+    ]);
+  }, [applications, contacts, cvDocuments, profile, savedEvents]);
+
+  const syncNow = useCallback(async () => {
+    if (!isAuthenticated) return;
+    setIsCloudSyncing(true);
+    try {
+      const rawQueue = await AsyncStorage.getItem(SYNC_QUEUE_KEY);
+      const queue: SyncQueueItem[] = rawQueue ? JSON.parse(rawQueue) : [];
+      let remaining = queue;
+
+      if (queue.length > 0) {
+        const result = await pushSync({ mutations: queue });
+        remaining = queue.filter(item => !result.applied.includes(item.idempotencyKey));
+        await AsyncStorage.setItem(SYNC_QUEUE_KEY, JSON.stringify(remaining));
+        setPendingSyncCount(remaining.length);
+        if (result.conflicts.length > 0) {
+          setSyncError(`${result.conflicts.length} cloud conflict(s) need review.`);
+        }
+      }
+
+      const since = await AsyncStorage.getItem(SYNC_CURSOR_KEY);
+      const result = await pullSync({
+        since: since ?? undefined,
+        entities: ['profile', 'applications', 'contacts', 'savedEvents', 'cvDocuments'],
+      });
+      await mergePulledRecords(result.records);
+      await AsyncStorage.setItem(SYNC_CURSOR_KEY, result.cursor);
+      if (remaining.length === 0) setSyncError(null);
+    } catch (cause) {
+      setSyncError(cause instanceof Error ? cause.message : 'Cloud sync is unavailable.');
+    } finally {
+      setIsCloudSyncing(false);
+    }
+  }, [isAuthenticated, mergePulledRecords]);
+
+  const queueMutation = useCallback(async (mutation: SyncQueueItem) => {
+    const rawQueue = await AsyncStorage.getItem(SYNC_QUEUE_KEY);
+    const queue: SyncQueueItem[] = rawQueue ? JSON.parse(rawQueue) : [];
+    const next = [
+      ...queue.filter(item => item.idempotencyKey !== mutation.idempotencyKey),
+      mutation,
+    ];
+    await AsyncStorage.setItem(SYNC_QUEUE_KEY, JSON.stringify(next));
+    setPendingSyncCount(next.length);
+    if (isAuthenticated) void syncNow();
+  }, [isAuthenticated, syncNow]);
+
   const updateProfile = useCallback(async (p: UserProfile) => {
     setProfile(p);
     await AsyncStorage.setItem(PROFILE_KEY, JSON.stringify(p));
-  }, []);
+    await queueMutation({
+      idempotencyKey: genId(),
+      entity: 'profile',
+      recordId: 'profile',
+      operation: 'upsert',
+      payload: p as unknown as Record<string, unknown>,
+      updatedAt: new Date().toISOString(),
+    });
+  }, [queueMutation]);
 
   const addApplication = useCallback(async (data: Omit<Application, 'id' | 'lastModified'>) => {
     const now = new Date().toISOString();
     const app: Application = { ...data, id: genId(), lastModified: now, createdDate: now };
     setApplications(prev => {
       const next = [app, ...prev];
-      AsyncStorage.setItem(APPS_KEY, JSON.stringify(next));
+      void AsyncStorage.setItem(APPS_KEY, JSON.stringify(next));
       return next;
+    });
+    await queueMutation({
+      idempotencyKey: genId(),
+      entity: 'applications',
+      recordId: app.id,
+      operation: 'upsert',
+      payload: app as unknown as Record<string, unknown>,
+      updatedAt: now,
     });
     return app;
-  }, []);
+  }, [queueMutation]);
 
   const updateApplication = useCallback(async (id: string, updates: Partial<Application>) => {
-    setApplications(prev => {
-      const next = prev.map(a => a.id === id ? { ...a, ...updates, lastModified: new Date().toISOString() } : a);
-      AsyncStorage.setItem(APPS_KEY, JSON.stringify(next));
-      return next;
+    const existing = applications.find(value => value.id === id);
+    if (!existing) return;
+    const updated = { ...existing, ...updates, lastModified: new Date().toISOString() };
+    await saveApps(applications.map(value => value.id === id ? updated : value));
+    await queueMutation({
+      idempotencyKey: genId(),
+      entity: 'applications',
+      recordId: id,
+      operation: 'upsert',
+      payload: updated as unknown as Record<string, unknown>,
+      updatedAt: updated.lastModified,
     });
-  }, []);
+  }, [applications, queueMutation, saveApps]);
 
   const deleteApplication = useCallback(async (id: string) => {
-    setApplications(prev => {
-      const next = prev.filter(a => a.id !== id);
-      AsyncStorage.setItem(APPS_KEY, JSON.stringify(next));
-      return next;
+    await saveApps(applications.filter(value => value.id !== id));
+    await queueMutation({
+      idempotencyKey: genId(),
+      entity: 'applications',
+      recordId: id,
+      operation: 'delete',
+      updatedAt: new Date().toISOString(),
     });
-  }, []);
+  }, [applications, queueMutation, saveApps]);
 
   const addContact = useCallback(async (data: Omit<Contact, 'id' | 'addedDate'>) => {
     const contact: Contact = { ...data, id: genId(), addedDate: new Date().toISOString() };
-    setContacts(prev => {
-      const next = [contact, ...prev];
-      AsyncStorage.setItem(CONTACTS_KEY, JSON.stringify(next));
-      return next;
+    await saveContacts([contact, ...contacts]);
+    await queueMutation({
+      idempotencyKey: genId(),
+      entity: 'contacts',
+      recordId: contact.id,
+      operation: 'upsert',
+      payload: contact as unknown as Record<string, unknown>,
+      updatedAt: contact.addedDate,
     });
     return contact;
-  }, []);
+  }, [contacts, queueMutation, saveContacts]);
 
   const updateContact = useCallback(async (id: string, updates: Partial<Contact>) => {
-    setContacts(prev => {
-      const next = prev.map(c => c.id === id ? { ...c, ...updates } : c);
-      AsyncStorage.setItem(CONTACTS_KEY, JSON.stringify(next));
-      return next;
+    const existing = contacts.find(value => value.id === id);
+    if (!existing) return;
+    const updated = { ...existing, ...updates };
+    await saveContacts(contacts.map(value => value.id === id ? updated : value));
+    await queueMutation({
+      idempotencyKey: genId(),
+      entity: 'contacts',
+      recordId: id,
+      operation: 'upsert',
+      payload: updated as unknown as Record<string, unknown>,
+      updatedAt: new Date().toISOString(),
     });
-  }, []);
+  }, [contacts, queueMutation, saveContacts]);
 
   const deleteContact = useCallback(async (id: string) => {
-    setContacts(prev => {
-      const next = prev.filter(c => c.id !== id);
-      AsyncStorage.setItem(CONTACTS_KEY, JSON.stringify(next));
-      return next;
+    await saveContacts(contacts.filter(value => value.id !== id));
+    await queueMutation({
+      idempotencyKey: genId(),
+      entity: 'contacts',
+      recordId: id,
+      operation: 'delete',
+      updatedAt: new Date().toISOString(),
     });
-  }, []);
+  }, [contacts, queueMutation, saveContacts]);
 
   const saveEvent = useCallback(async (event: Omit<SavedEvent, 'savedAt'>) => {
+    if (savedEvents.some(value => value.id === event.id)) return;
     const saved: SavedEvent = { ...event, savedAt: new Date().toISOString() };
-    setSavedEvents(prev => {
-      if (prev.some(e => e.id === event.id)) return prev;
-      const next = [saved, ...prev];
-      AsyncStorage.setItem(SAVED_EVENTS_KEY, JSON.stringify(next));
-      return next;
+    const next = [saved, ...savedEvents];
+    setSavedEvents(next);
+    await AsyncStorage.setItem(SAVED_EVENTS_KEY, JSON.stringify(next));
+    await queueMutation({
+      idempotencyKey: genId(),
+      entity: 'savedEvents',
+      recordId: saved.id,
+      operation: 'upsert',
+      payload: saved as unknown as Record<string, unknown>,
+      updatedAt: saved.savedAt,
     });
-  }, []);
+  }, [queueMutation, savedEvents]);
 
   const unsaveEvent = useCallback(async (id: string) => {
-    setSavedEvents(prev => {
-      const next = prev.filter(e => e.id !== id);
-      AsyncStorage.setItem(SAVED_EVENTS_KEY, JSON.stringify(next));
-      return next;
+    setSavedEvents(prev => prev.filter(value => value.id !== id));
+    await AsyncStorage.setItem(SAVED_EVENTS_KEY, JSON.stringify(savedEvents.filter(value => value.id !== id)));
+    await queueMutation({
+      idempotencyKey: genId(),
+      entity: 'savedEvents',
+      recordId: id,
+      operation: 'delete',
+      updatedAt: new Date().toISOString(),
     });
-  }, []);
+  }, [queueMutation, savedEvents]);
 
   const saveCVDocument = useCallback(async (
     data: Omit<CVDocument, 'id' | 'createdAt' | 'updatedAt'> & { id?: string },
@@ -240,26 +407,100 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       createdAt: existing?.createdAt ?? now,
       updatedAt: now,
     };
-
     const next = existing
       ? cvDocuments.map(document => document.id === existing.id ? savedDocument : document)
       : [savedDocument, ...cvDocuments];
     setCVDocuments(next);
     await AsyncStorage.setItem(CV_DOCUMENTS_KEY, JSON.stringify(next));
+    await queueMutation({
+      idempotencyKey: genId(),
+      entity: 'cvDocuments',
+      recordId: savedDocument.id,
+      operation: 'upsert',
+      payload: savedDocument as unknown as Record<string, unknown>,
+      updatedAt: now,
+    });
     return savedDocument;
-  }, [cvDocuments]);
+  }, [cvDocuments, queueMutation]);
 
   const deleteCVDocument = useCallback(async (id: string) => {
-    setCVDocuments(prev => {
-      const next = prev.filter(document => document.id !== id);
-      AsyncStorage.setItem(CV_DOCUMENTS_KEY, JSON.stringify(next));
-      return next;
+    const next = cvDocuments.filter(document => document.id !== id);
+    setCVDocuments(next);
+    await AsyncStorage.setItem(CV_DOCUMENTS_KEY, JSON.stringify(next));
+    await queueMutation({
+      idempotencyKey: genId(),
+      entity: 'cvDocuments',
+      recordId: id,
+      operation: 'delete',
+      updatedAt: new Date().toISOString(),
     });
-  }, []);
+  }, [cvDocuments, queueMutation]);
+
+  useEffect(() => {
+    if (!isLoaded || !isAuthenticated || !user) return;
+    const bootstrapKey = `cc_sync_bootstrap_${user.id}`;
+    (async () => {
+      if (!(await AsyncStorage.getItem(bootstrapKey))) {
+        const updatedAt = new Date().toISOString();
+        const snapshot: SyncQueueItem[] = [
+          ...(profile ? [{
+            idempotencyKey: genId(),
+            entity: 'profile',
+            recordId: 'profile',
+            operation: 'upsert' as const,
+            payload: profile as unknown as Record<string, unknown>,
+            updatedAt,
+          }] : []),
+          ...applications.map(item => ({
+            idempotencyKey: genId(),
+            entity: 'applications',
+            recordId: item.id,
+            operation: 'upsert' as const,
+            payload: item as unknown as Record<string, unknown>,
+            updatedAt,
+          })),
+          ...contacts.map(item => ({
+            idempotencyKey: genId(),
+            entity: 'contacts',
+            recordId: item.id,
+            operation: 'upsert' as const,
+            payload: item as unknown as Record<string, unknown>,
+            updatedAt,
+          })),
+          ...savedEvents.map(item => ({
+            idempotencyKey: genId(),
+            entity: 'savedEvents',
+            recordId: item.id,
+            operation: 'upsert' as const,
+            payload: item as unknown as Record<string, unknown>,
+            updatedAt,
+          })),
+          ...cvDocuments.map(item => ({
+            idempotencyKey: genId(),
+            entity: 'cvDocuments',
+            recordId: item.id,
+            operation: 'upsert' as const,
+            payload: item as unknown as Record<string, unknown>,
+            updatedAt,
+          })),
+        ];
+        if (snapshot.length) {
+          const rawQueue = await AsyncStorage.getItem(SYNC_QUEUE_KEY);
+          const queue: SyncQueueItem[] = rawQueue ? JSON.parse(rawQueue) : [];
+          const next = [...queue, ...snapshot];
+          await AsyncStorage.setItem(SYNC_QUEUE_KEY, JSON.stringify(next));
+          setPendingSyncCount(next.length);
+        }
+        await AsyncStorage.setItem(bootstrapKey, '1');
+      }
+      await syncNow();
+    })();
+  }, [applications, contacts, cvDocuments, isAuthenticated, isLoaded, profile, savedEvents, syncNow, user]);
 
   return (
     <AppContext.Provider value={{
       profile, applications, contacts, savedEvents, cvDocuments, isLoaded,
+      isCloudSyncing, pendingSyncCount, syncError, syncNow,
       updateProfile,
       addApplication, updateApplication, deleteApplication,
       addContact, updateContact, deleteContact,

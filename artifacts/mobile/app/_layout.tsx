@@ -16,6 +16,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { AppProvider, useApp } from '@/context/AppContext';
+import { AuthProvider } from '@/context/AuthContext';
 import { ThemeProvider } from '@/context/ThemeContext';
 import { useColors } from '@/hooks/useColors';
 
@@ -47,6 +48,7 @@ function RootLayoutNav() {
       <OnboardingRedirect />
       <Stack screenOptions={{ headerShown: false }}>
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+        <Stack.Screen name="auth" options={{ headerShown: false, animation: 'slide_from_bottom' }} />
         <Stack.Screen
           name="onboarding"
           options={{ headerShown: false, animation: 'fade', gestureEnabled: false }}
@@ -77,13 +79,15 @@ export default function RootLayout() {
       <SafeAreaProvider>
         <ErrorBoundary>
           <QueryClientProvider client={queryClient}>
-            <AppProvider>
-              <GestureHandlerRootView style={{ flex: 1 }}>
-                <KeyboardProvider>
-                  <RootLayoutNav />
-                </KeyboardProvider>
-              </GestureHandlerRootView>
-            </AppProvider>
+            <AuthProvider>
+              <AppProvider>
+                <GestureHandlerRootView style={{ flex: 1 }}>
+                  <KeyboardProvider>
+                    <RootLayoutNav />
+                  </KeyboardProvider>
+                </GestureHandlerRootView>
+              </AppProvider>
+            </AuthProvider>
           </QueryClientProvider>
         </ErrorBoundary>
       </SafeAreaProvider>
