@@ -126,10 +126,10 @@ export default function CompaniesScreen() {
       <View style={s.headerRow}>
         <View style={{ flex: 1 }}>
           <Text style={s.title}>Find WIL Placements</Text>
-          <Text style={s.subtitle}>AI-powered discovery of South African companies offering Work-Integrated Learning.</Text>
+          <Text style={s.subtitle}>AI-powered discovery of Zambian companies offering Work-Integrated Learning.</Text>
         </View>
         <View style={s.flagTag}>
-          <Text style={s.flagText}>🇿🇦</Text>
+          <Text style={s.flagText}>🇿🇲</Text>
         </View>
       </View>
 
@@ -163,7 +163,7 @@ export default function CompaniesScreen() {
           {discoverMutation.isPending ? (
             <>
               <ActivityIndicator color="#fff" size="small" />
-              <Text style={s.scanBtnText}>Scanning South Africa…</Text>
+              <Text style={s.scanBtnText}>Scanning Zambia…</Text>
             </>
           ) : (
             <>
@@ -248,7 +248,7 @@ export default function CompaniesScreen() {
           </View>
           <Text style={s.emptyTitle}>Ready to scan</Text>
           <Text style={s.emptySubtitle}>
-            We'll identify South African companies offering WIL placements that match your degree — then let you track them directly.
+            We'll identify Zambian companies offering WIL placements that match your degree — then let you track them directly.
           </Text>
         </View>
       )}
