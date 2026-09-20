@@ -21,7 +21,7 @@ async function fetchSerperEvents(query: string): Promise<string> {
   const res = await fetch("https://google.serper.dev/search", {
     method: "POST",
     headers: { "X-API-KEY": key, "Content-Type": "application/json" },
-    body: JSON.stringify({ q: query, gl: "za", hl: "en", num: 10 }),
+    body: JSON.stringify({ q: query, gl: "zm", hl: "en", num: 10 }),
     signal: AbortSignal.timeout(10000),
   });
   if (!res.ok) return "";
@@ -35,9 +35,9 @@ async function fetchEventbriteEvents(city: string, query: string): Promise<strin
   const key = process.env.EVENTBRITE_API_KEY;
   if (!key) return "";
   const today = new Date().toISOString().split("T")[0];
-  const locationParam = city && city.toLowerCase() !== "south africa"
-    ? `${city}, South Africa`
-    : "South Africa";
+  const locationParam = city && city.toLowerCase() !== "zambia"
+    ? `${city}, Zambia`
+    : "Zambia";
   const url = new URL("https://www.eventbriteapi.com/v3/events/search/");
   url.searchParams.set("q", query);
   url.searchParams.set("location.address", locationParam);
@@ -81,10 +81,8 @@ async function fetchTavilyEvents(query: string): Promise<string> {
       search_depth: "advanced",
       max_results: 10,
       include_domains: [
-        "eventbrite.co.za", "eventbrite.com", "meetup.com", "bizcommunity.com",
-        "saica.co.za", "ecsa.co.za", "iitpsa.org.za", "africarena.com",
-        "africa.comworldseries.com", "careerjunction.co.za", "siliconcape.com",
-        "theinnovationhub.com", "bandwidthbarn.com", "launchlab.co.za",
+        "eventbrite.com", "meetup.com", "linkedin.com", "facebook.com",
+        "africarena.com", "africa.comworldseries.com",
       ],
     }),
     signal: AbortSignal.timeout(15000),
@@ -115,14 +113,14 @@ router.post("/ai/discover-companies", async (req, res) => {
     goals && `Career goals: ${goals}`,
   ].filter(Boolean).join('\n');
 
-  const prompt = `You are a South African career advisor helping a student find Work-Integrated Learning (WIL) placement opportunities.
+  const prompt = `You are a Zambian career advisor helping a student find Work-Integrated Learning (WIL) placement opportunities.
 
 Student profile:
 Degree: ${degree}
 ${profileLines}
 Current location: latitude ${latitude}, longitude ${longitude}
 
-List 8 real South African companies that are known to offer WIL placements, graduate programmes, or internships relevant to this student's degree and goals. Prioritise companies that align with the student's preferred industries if provided. Focus on companies actually operating in South Africa — include both large corporates and reputable SMEs. Where relevant, mention alignment with South African professional bodies such as ECSA (Engineering Council of South Africa), SAICA (South African Institute of Chartered Accountants), IITPSA (Institute of IT Professionals South Africa), or BUSA (Business Unity South Africa).
+List 8 real Zambian companies that are known to offer WIL placements, graduate programmes, or internships relevant to this student's degree and goals. Prioritise companies that align with the student's preferred industries if provided. Focus on companies actually operating in Zambia — include both large corporates and reputable SMEs. Where relevant, mention alignment with Zambian professional bodies such as ECSA (Engineering Council of Zambia), SAICA (Zambian Institute of Chartered Accountants), IITPSA (Institute of IT Professionals Zambia), or BUSA (Business Unity Zambia).
 
 Return ONLY a valid JSON array with no markdown, no code fences, no explanation. Each object must have:
 - name: string (company name)
@@ -131,7 +129,7 @@ Return ONLY a valid JSON array with no markdown, no code fences, no explanation.
 - website: string | null (official website URL, or null if unknown)
 
 Example format:
-[{"name":"Deloitte South Africa","description":"...","fitScore":"Excellent Fit","website":"https://www2.deloitte.com/za"}]`;
+[{"name":"ZESCO","description":"...","fitScore":"Excellent Fit","website":"https://www.zesco.co.zm"}]`;
 
   try {
     const response = await ai.models.generateContent({
@@ -175,7 +173,7 @@ router.post("/ai/draft-letter", async (req, res) => {
     ? `The student has written an initial draft below. Polish it, keeping their voice, but improve structure, clarity, and professional tone:\n\n${userDraft}`
     : "Write a complete cover letter from scratch.";
 
-  const prompt = `You are a South African career counsellor helping a student write a professional cover letter for a Work-Integrated Learning (WIL) placement.
+  const prompt = `You are a Zambian career counsellor helping a student write a professional cover letter for a Work-Integrated Learning (WIL) placement.
 
 Company: ${companyName}
 Role applied for: ${role}
@@ -184,8 +182,8 @@ ${profileLines}
 Career goals: ${goals}
 ${portfolioLine}
 
-South African professional standards to follow:
-- Use "Dear Sir/Madam" as the salutation (standard in South African corporate correspondence)
+Zambian professional standards to follow:
+- Use "Dear Sir/Madam" as the salutation (standard in Zambian corporate correspondence)
 - Use British English spelling (e.g. "organisation", "programme", "favour")
 - Keep the tone formal but warm — not stiff
 - Reference WIL or Work-Integrated Learning where appropriate
@@ -216,24 +214,24 @@ router.post("/ai/research-company", async (req, res) => {
   }
   const { companyName } = parsed.data;
 
-  const prompt = `You are a South African career advisor. Write a concise research summary about "${companyName}" specifically in the South African context.
+  const prompt = `You are a Zambian career advisor. Write a concise research summary about "${companyName}" specifically in the Zambian context.
 
 Cover these sections (use plain text headings, no markdown symbols):
 
 Overview
-What the company does, its size, and its presence in South Africa.
+What the company does, its size, and its presence in Zambia.
 
 Industry & Sector
-The industry they operate in and any relevant South African regulatory bodies or sector bodies.
+The industry they operate in and any relevant Zambian regulatory bodies or sector bodies.
 
 Culture & Values
 Known workplace culture, values, and what they look for in candidates.
 
 WIL / Graduate Programmes
-Any known Work-Integrated Learning placements, graduate programmes, bursaries, or internships offered in South Africa.
+Any known Work-Integrated Learning placements, graduate programmes, bursaries, or internships offered in Zambia.
 
 Interview Tips
-2–3 specific tips for someone interviewing at this company in South Africa.
+2–3 specific tips for someone interviewing at this company in Zambia.
 
 Keep the summary practical and useful for a student applying for a WIL placement. Write in plain paragraphs — no bullet points, no markdown.`;
 
@@ -257,7 +255,7 @@ router.post("/ai/star-feedback", async (req, res) => {
   }
   const { question, situation, task, action, result } = parsed.data;
 
-  const prompt = `You are an experienced South African interview coach evaluating a STAR-format interview answer.
+  const prompt = `You are an experienced Zambian interview coach evaluating a STAR-format interview answer.
 
 Interview question: "${question}"
 
@@ -274,7 +272,7 @@ Provide structured, honest feedback covering:
 4. A suggested stronger version of the Result, showing impact with numbers or concrete outcomes where possible
 5. A score out of 10 with brief justification
 
-Keep your tone encouraging but direct. This is for a South African student preparing for WIL placement interviews.`;
+Keep your tone encouraging but direct. This is for a Zambian student preparing for WIL placement interviews.`;
 
   try {
     const response = await ai.models.generateContent({
@@ -306,7 +304,7 @@ router.post("/ai/interview-questions", async (req, res) => {
     ? `Company research summary:\n${researchSummary}\n\n`
     : "";
 
-  const prompt = `You are a South African interview coach preparing a student for a WIL placement interview.
+  const prompt = `You are a Zambian interview coach preparing a student for a WIL placement interview.
 
 Company: ${companyName}
 Role: ${role}
@@ -325,7 +323,7 @@ Return ONLY a valid JSON object with no markdown, no code fences. Format:
 }
 
 personal: questions about the student's background, motivation, strengths, weaknesses, and goals (include at least one about why they want a WIL placement specifically)
-company: questions about their knowledge of ${companyName} and the South African industry context
+company: questions about their knowledge of ${companyName} and the Zambian industry context
 experience: questions about their academic projects, teamwork, problem-solving, and relevant technical skills for the ${role} role`;
 
   try {
@@ -356,7 +354,7 @@ router.post("/ai/profile-chat", async (req, res) => {
   }
   const { messages } = parsed.data;
 
-  const systemPrompt = `You are Career Compass AI, a warm, curious, and encouraging career assistant. Your job is to have a natural conversation and learn as much as possible about the person — their background, qualifications, experience, skills, and goals — so you can help them find the best WIL placements and career opportunities in South Africa.
+  const systemPrompt = `You are Career Compass AI, a warm, curious, and encouraging career assistant. Your job is to have a natural conversation and learn as much as possible about the person — their background, qualifications, experience, skills, and goals — so you can help them find the best WIL placements and career opportunities in Zambia.
 
 Be genuinely curious. Don't stick to a rigid script. Based on what the person shares, ask thoughtful follow-up questions. The goal is to build a rich, personalised profile that captures who they really are.
 
@@ -370,7 +368,7 @@ Topics to explore naturally (not as a checklist — weave them into genuine conv
 - Work experience, internships, learnerships, or volunteer work (encourage details)
 - Technical skills — software, tools, programming languages, equipment, systems
 - Soft skills and personal strengths — leadership, teamwork, communication, etc.
-- Languages they speak (very relevant in South Africa's multilingual context)
+- Languages they speak (very relevant in Zambia's multilingual context)
 - Extracurricular activities, clubs, societies, or community involvement
 - Academic projects or research they're proud of
 - Awards, bursaries, achievements, or recognition they've received
@@ -384,7 +382,7 @@ Rules:
 - Never number questions or show a list of topics
 - Be warm, specific, and encouraging in your questions
 - If someone gives a short answer, follow up to get more detail
-- Use South African context naturally (WIL, NQF levels, NSFAS, ECSA, SAICA, specific universities, industries, etc.)
+- Use Zambian context naturally (WIL, relevant Zambian qualification levels, local professional bodies, specific universities, industries, etc.)
 - Accept all forms of natural language and interpret correctly (e.g. "second year mech eng at Wits" → Year of Study: 2nd Year, Degree: BEng Mechanical Engineering, Institution: University of the Witwatersrand)
 - Continue the conversation until you have a good, well-rounded picture of the person
 
@@ -567,13 +565,13 @@ router.post("/ai/networking-events", async (req, res) => {
     goals && `Career goals: ${goals}`,
   ].filter(Boolean).join("\n");
 
-  const locationContext = city && city.toLowerCase() !== "south africa"
-    ? `Primary location: ${city}, South Africa. Also include events elsewhere in South Africa and relevant African or international events the student could attend or join online.`
-    : `Primary location: South Africa (Johannesburg, Cape Town, Durban, Pretoria, Port Elizabeth/Gqeberha, Bloemfontein, East London, Stellenbosch, and other cities). Also include relevant international events accessible online.`;
+  const locationContext = city && city.toLowerCase() !== "Zambia"
+    ? `Primary location: ${city}, Zambia. Also include events elsewhere in Zambia and relevant African or international events the student could attend or join online.`
+    : `Primary location: Zambia (Lusaka, Ndola, Kitwe, Livingstone, and other cities). Also include relevant international events accessible online.`;
 
   const searchQuery = [
     "career networking events",
-    city && city.toLowerCase() !== "south africa" ? city : "South Africa",
+    city && city.toLowerCase() !== "Zambia" ? city : "Zambia",
     degree ? degree.split(" ").slice(-2).join(" ") : "",
     "2025 2026",
   ].filter(Boolean).join(" ");
@@ -582,7 +580,7 @@ router.post("/ai/networking-events", async (req, res) => {
   const [serperResult, eventbriteResult, tavilyResult] = await Promise.allSettled([
     fetchSerperEvents(searchQuery),
     fetchEventbriteEvents(city ?? "", "career networking professional development"),
-    fetchTavilyEvents(`career networking events South Africa ${city ?? ""} 2025 2026`),
+    fetchTavilyEvents(`career networking events Zambia ${city ?? ""} 2025 2026`),
   ]);
 
   const serperData = serperResult.status === "fulfilled" ? serperResult.value : "";
@@ -618,18 +616,18 @@ router.post("/ai/networking-events", async (req, res) => {
     "other (Any opportunity not listed above)",
   ].join("\n");
 
-  const prompt = `Today is ${today}. You are a career opportunities assistant helping a South African student find REAL, upcoming networking and professional development opportunities.
+  const prompt = `Today is ${today}. You are a career opportunities assistant helping a Zambian student find REAL, upcoming networking and professional development opportunities.
 
 Student profile:
-${profileContext || "General student seeking WIL placement or graduate opportunities in South Africa"}
+${profileContext || "General student seeking WIL placement or graduate opportunities in Zambia"}
 ${locationContext}
 ${externalContext ? `\nREAL EVENT DATA FROM LIVE SEARCHES (use this as your primary source — prefer these over your training data):\n${externalContext}\n` : ""}
 IMPORTANT INSTRUCTIONS:
 - Use the real event data above as your PRIMARY source. Fill in any missing details from your knowledge.
 - If no real data was provided above, search the internet NOW for real events and opportunities.
-- Prioritise South Africa (Johannesburg, Cape Town, Durban, Pretoria, Port Elizabeth/Gqeberha, Bloemfontein, East London, Stellenbosch, etc.) but include any African or international events that are valuable.
+- Prioritise Zambia (Lusaka, Ndola, Kitwe, Livingstone, and other Zambian cities) but include any African or international events that are valuable.
 - Cast a WIDE net — do not limit results to only what matches the student's exact degree.
-- Search across: Facebook Events SA, LinkedIn Events, Eventbrite South Africa, Meetup.com, Bizcommunity (bizcommunity.com), Innovation Hub Pretoria, Silicon Cape, CareerJunction, SAICA (saica.co.za), ECSA (ecsa.co.za), IITPSA (iitpsa.org.za), university career portals (UCT, Wits, UP, Stellenbosch, UJ, DUT, CPUT, TUT, UKZN), AfricArena, AfricaCom, company career pages, and any other relevant South African or African platform.
+- Search across: Facebook Events, LinkedIn Events, Eventbrite, Meetup.com, relevant Zambian news and university portals, professional-association sites, company career pages, AfricArena, AfricaCom, and any other relevant Zambian, African, or international platform.
 - Include opportunities the student may not have thought to look for: hackathons, alumni events, webinars, startup pitch competitions, professional association meetings, mentorship programmes, open days, awards dinners, trade fairs, volunteer/community events, training courses, bursary info sessions, and more.
 - For online/virtual events, mark isOnline as true.
 
@@ -640,11 +638,11 @@ Return ONLY a valid JSON array (no markdown, no code fences, no explanation). Ea
 - organizer: name of the hosting organisation, company, or institution
 - dateLabel: human-readable date (e.g. "Sat, 17 May 2025" or "15–17 May 2025" or "Ongoing" for programmes)
 - dateIso: ISO 8601 string (e.g. "2025-05-17T09:00:00") or "" if unknown
-- location: full venue + city (e.g. "Sandton Convention Centre, Johannesburg" or "Online / Zoom")
+- location: full venue + city (e.g. "Mulungushi International Conference Centre, Lusaka" or "Online / Zoom")
 - description: 1–2 sentences explaining what it is and why it matters for the student
 - url: a direct, working URL to the event page or registration (must be a real URL, not a homepage)
 - source: platform where you found it (e.g. "Eventbrite", "Serper", "Bizcommunity", "LinkedIn")
-- tags: array of 3–5 keyword strings relevant to South Africa and the event (e.g. ["technology", "networking", "Johannesburg", "startups"])
+- tags: array of 3–5 keyword strings relevant to Zambia and the event (e.g. ["technology", "networking", "Lusaka", "startups"])
 - isOnline: true if virtual, false if in-person
 
 Only include events happening AFTER today (${today}). Return 8–15 diverse results. If local events are limited, supplement with high-value African or international online events. Return [] only if absolutely nothing real is found.`;
